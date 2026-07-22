@@ -1,20 +1,37 @@
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+
 from app.config import get_settings
 from app.database import get_db
+from app.errors import (
+    AppError,
+    app_error_handler,
+    validation_error_handler,
+)
+from app.logging_config import configure_logging
+from app.middleware import RequestLoggingMiddleware
 from app.models import Appointment
 from app.schemas import AppointmentCreate, AppointmentResponse
 
+
+# Configure application logging before the API starts.
+configure_logging()
+
+# Load centralized application settings from backend/.env.
 settings = get_settings()
+
 
 app = FastAPI(
     title=settings.app_name,
     version=settings.api_version,
 )
 
+
+# Allow the React development application to call FastAPI.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
@@ -24,10 +41,26 @@ app.add_middleware(
 )
 
 
+# Add request ID, response status, and request-duration logging.
+app.add_middleware(RequestLoggingMiddleware)
+
+
+# Register consistent application error responses.
+app.add_exception_handler(
+    AppError,
+    app_error_handler,
+)
+
+app.add_exception_handler(
+    RequestValidationError,
+    validation_error_handler,
+)
+
+
 @app.get("/")
 def root() -> dict[str, str]:
     return {
-        "message": "Turn Time Management API is running"
+        "message": f"{settings.app_name} is running",
     }
 
 
@@ -65,9 +98,13 @@ def get_appointment(
     appointment = db.get(Appointment, appt_id)
 
     if appointment is None:
-        raise HTTPException(
+        raise AppError(
+            message="Appointment not found",
+            code="APPOINTMENT_NOT_FOUND",
             status_code=404,
-            detail="Appointment not found",
+            details={
+                "appt_id": appt_id,
+            },
         )
 
     return appointment
@@ -82,26 +119,40 @@ def create_appointment(
     payload: AppointmentCreate,
     db: Session = Depends(get_db),
 ) -> Appointment:
-    existing = db.get(Appointment, payload.appt_id)
+    existing_appointment = db.get(
+        Appointment,
+        payload.appt_id,
+    )
 
-    if existing is not None:
-        raise HTTPException(
+    if existing_appointment is not None:
+        raise AppError(
+            message="Appointment ID already exists",
+            code="APPOINTMENT_ALREADY_EXISTS",
             status_code=409,
-            detail="Appointment ID already exists",
+            details={
+                "appt_id": payload.appt_id,
+            },
         )
 
-    appointment = Appointment(**payload.model_dump())
+    appointment = Appointment(
+        **payload.model_dump()
+    )
 
     try:
         db.add(appointment)
         db.commit()
         db.refresh(appointment)
+
     except IntegrityError as exc:
         db.rollback()
 
-        raise HTTPException(
+        raise AppError(
+            message="Unable to create appointment",
+            code="APPOINTMENT_CREATE_FAILED",
             status_code=400,
-            detail="Unable to create appointment",
+            details={
+                "appt_id": payload.appt_id,
+            },
         ) from exc
 
     return appointment

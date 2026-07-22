@@ -3,22 +3,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-
+from app.config import get_settings
 from app.database import get_db
 from app.models import Appointment
 from app.schemas import AppointmentCreate, AppointmentResponse
 
+settings = get_settings()
+
 app = FastAPI(
-    title="Turn Time Management API",
-    version="1.0.0",
+    title=settings.app_name,
+    version=settings.api_version,
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -34,7 +33,11 @@ def root() -> dict[str, str]:
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "healthy"}
+    return {
+        "status": "healthy",
+        "environment": settings.environment,
+        "version": settings.api_version,
+    }
 
 
 @app.get(

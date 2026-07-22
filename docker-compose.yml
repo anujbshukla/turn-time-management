@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: turn-time-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: turn_time
+      POSTGRES_USER: turntime
+      POSTGRES_PASSWORD: localpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - turn_time_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U turntime -d turn_time"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  turn_time_postgres_data:

@@ -203,6 +203,7 @@ def reset_generated_data(
     cursor.execute(
         """
         TRUNCATE TABLE
+            recommendation_actions,
             appointment_recommendations,
             appointment_predictions,
             appointment_events,
@@ -873,6 +874,7 @@ def generate_appointments(
     events = []
     predictions = []
     recommendations = []
+    recommendation_actions = []
 
     now = datetime.now().replace(
         second=0,
@@ -1277,7 +1279,18 @@ def generate_appointments(
                 )
             )
 
-            if risk_score >= 65:
+            recovered_late_appointment = (
+                status == "Completed"
+                and actual_arrival_delay > 0
+                and actual_sla_missed is False
+            )
+
+            should_generate_recommendation = (
+                risk_score >= 65
+                or recovered_late_appointment
+            )
+
+            if should_generate_recommendation:
                 recommended_dock = rng.choice(
                     docks_by_facility[facility_id]
                 )
@@ -1293,18 +1306,87 @@ def generate_appointments(
                     2,
                 )
 
-                savings = round(
-                    exposure * 0.70,
+                if recovered_late_appointment:
+                    recommendation_status = (
+                        "Completed"
+                    )
+                elif status == "Completed":
+                    recommendation_status = (
+                        rng.choice(
+                            [
+                                "Accepted",
+                                "Completed",
+                                "Pending",
+                            ]
+                        )
+                    )
+                else:
+                    recommendation_status = (
+                        rng.choices(
+                            [
+                                "Pending",
+                                "Accepted",
+                            ],
+                            weights=[70, 30],
+                            k=1,
+                        )[0]
+                    )
+
+                estimated_minutes_saved = min(
+                    55,
+                    max(
+                        12,
+                        round(
+                            predicted_duration * 0.25
+                            + max(
+                                predicted_delay,
+                                0,
+                            )
+                            * 0.10
+                        ),
+                    ),
+                )
+
+                projected_turn_time = max(
+                    45,
+                    actual_turn_time
+                    - estimated_minutes_saved,
+                )
+
+                avoided_minutes = max(
+                    0,
+                    actual_turn_time
+                    - max(
+                        projected_turn_time,
+                        sla_minutes,
+                    ),
+                )
+
+                estimated_savings = round(
+                    avoided_minutes
+                    / 60
+                    * appointments[-1][24],
                     2,
                 )
+
+                if (
+                    recovered_late_appointment
+                    and estimated_savings == 0
+                ):
+                    estimated_savings = round(
+                        appointments[-1][24]
+                        * rng.uniform(0.35, 1.10),
+                        2,
+                    )
 
                 recommendations.append(
                     (
                         appt_id,
                         "SLA_RECOVERY",
                         (
-                            "Prioritize the appointment, "
-                            f"move it to {recommended_dock}, "
+                            "Pre-stage the products, "
+                            f"reserve {recommended_dock}, "
+                            "assign the required equipment, "
                             "and add one loader."
                         ),
                         recommended_dock,
@@ -1312,9 +1394,137 @@ def generate_appointments(
                         1,
                         exposure,
                         50.00,
-                        savings,
-                        "Pending",
+                        estimated_savings,
+                        recommendation_status,
                     )
+                )
+
+                if recommendation_status == "Completed":
+                    action_status = "Completed"
+                elif recommendation_status == "Accepted":
+                    action_status = "Accepted"
+                else:
+                    action_status = "Proposed"
+
+                action_start_by = (
+                    scheduled_time
+                    - timedelta(minutes=45)
+                )
+
+                pre_stage_minutes = min(
+                    22,
+                    max(
+                        8,
+                        round(
+                            total_pallets * 0.30
+                        ),
+                    ),
+                )
+
+                recommendation_actions.extend(
+                    [
+                        (
+                            1,
+                            "PRE_STAGE_PRODUCTS",
+                            "Pre-stage appointment products",
+                            (
+                                f"Stage all {total_pallets} "
+                                "pallets in loading order "
+                                "before the truck is ready "
+                                "for loading."
+                            ),
+                            "Staging Team",
+                            action_start_by,
+                            pre_stage_minutes,
+                            0,
+                            0,
+                            None,
+                            recommended_dock,
+                            0.00,
+                            action_status,
+                            appt_id,
+                        ),
+                        (
+                            2,
+                            "RESERVE_DOCK",
+                            "Reserve the recommended dock",
+                            (
+                                f"Reserve {recommended_dock} "
+                                "and prevent conflicting "
+                                "appointments from using it."
+                            ),
+                            "Dock Supervisor",
+                            action_start_by,
+                            8,
+                            0,
+                            0,
+                            None,
+                            recommended_dock,
+                            0.00,
+                            action_status,
+                            appt_id,
+                        ),
+                        (
+                            3,
+                            "RESERVE_EQUIPMENT",
+                            "Reserve loading equipment",
+                            (
+                                "Reserve one forklift and "
+                                "one pallet jack before the "
+                                "appointment reaches the dock."
+                            ),
+                            "Equipment Coordinator",
+                            action_start_by,
+                            10,
+                            0,
+                            1,
+                            "Forklift",
+                            recommended_dock,
+                            25.00,
+                            action_status,
+                            appt_id,
+                        ),
+                        (
+                            4,
+                            "ADD_LABOR",
+                            "Assign one additional loader",
+                            (
+                                "Add one loader during the "
+                                "highest-volume portion of "
+                                "the loading process."
+                            ),
+                            "Shift Manager",
+                            actual_loading_start,
+                            14,
+                            1,
+                            0,
+                            None,
+                            recommended_dock,
+                            25.00,
+                            action_status,
+                            appt_id,
+                        ),
+                        (
+                            5,
+                            "PREPARE_DOCUMENTS",
+                            "Prepare shipping documents",
+                            (
+                                "Pre-print labels, seals, "
+                                "inspection forms, and "
+                                "shipping documents."
+                            ),
+                            "Warehouse Clerk",
+                            action_start_by,
+                            5,
+                            0,
+                            0,
+                            None,
+                            None,
+                            0.00,
+                            action_status,
+                            appt_id,
+                        ),
+                    ]
                 )
 
         if len(appointments) >= batch_size:
@@ -1325,6 +1535,7 @@ def generate_appointments(
                 events,
                 predictions,
                 recommendations,
+                recommendation_actions,
             )
 
             appointments.clear()
@@ -1332,6 +1543,7 @@ def generate_appointments(
             events.clear()
             predictions.clear()
             recommendations.clear()
+            recommendation_actions.clear()
 
     if appointments:
         write_appointment_batch(
@@ -1341,6 +1553,7 @@ def generate_appointments(
             events,
             predictions,
             recommendations,
+            recommendation_actions
         )
 
 
@@ -1351,6 +1564,7 @@ def write_appointment_batch(
     events: list[tuple],
     predictions: list[tuple],
     recommendations: list[tuple],
+    recommendation_actions: list[tuple],
 ) -> None:
     with cursor.copy(
         """
@@ -1469,7 +1683,47 @@ def write_appointment_batch(
         ) as copy:
             for row in recommendations:
                 copy.write_row(row)
-
+    if recommendation_actions:
+        cursor.executemany(
+            """
+            INSERT INTO recommendation_actions (
+                recommendation_id,
+                sequence_number,
+                action_code,
+                action_title,
+                action_description,
+                owner_role,
+                start_by,
+                estimated_minutes_saved,
+                additional_loaders,
+                additional_forklifts,
+                required_equipment_type,
+                required_dock_id,
+                estimated_action_cost,
+                status
+            )
+            SELECT
+                recommendation_id,
+                %s,
+                %s,
+                %s,
+                %s,
+                %s,
+                %s,
+                %s,
+                %s,
+                %s,
+                %s,
+                %s,
+                %s,
+                %s
+            FROM appointment_recommendations
+            WHERE appt_id = %s
+            ORDER BY created_at DESC
+            LIMIT 1;
+            """,
+            recommendation_actions,
+        )
 
 def main() -> None:
     args = parse_arguments()

@@ -1,5 +1,6 @@
+from typing import Any
+
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
 
 from app.errors import AppError
 from app.models import Appointment
@@ -10,8 +11,32 @@ from app.schemas import AppointmentCreate
 
 
 class AppointmentService:
-    def __init__(self, db: Session) -> None:
-        self.repository = AppointmentRepository(db)
+    def __init__(
+        self,
+        repository: AppointmentRepository,
+    ) -> None:
+        self.repository = repository
+
+    def get_paginated(
+        self,
+        *,
+        page: int,
+        page_size: int,
+        facility_id: str | None,
+        status: str | None,
+        risk_level: str | None,
+        outcome: str | None,
+        search: str | None,
+    ) -> dict[str, Any]:
+        return self.repository.get_paginated(
+            page=page,
+            page_size=page_size,
+            facility_id=facility_id,
+            status=status,
+            risk_level=risk_level,
+            outcome=outcome,
+            search=search,
+        )
 
     def get_all(self) -> list[Appointment]:
         return self.repository.get_all()
@@ -33,7 +58,9 @@ class AppointmentService:
         self,
         payload: AppointmentCreate,
     ) -> Appointment:
-        existing = self.repository.get_by_id(payload.appt_id)
+        existing = self.repository.get_by_id(
+            payload.appt_id
+        )
 
         if existing is not None:
             raise AppError(
@@ -43,10 +70,13 @@ class AppointmentService:
                 details={"appt_id": payload.appt_id},
             )
 
-        appointment = Appointment(**payload.model_dump())
+        appointment = Appointment(
+            **payload.model_dump()
+        )
 
         try:
             return self.repository.create(appointment)
+
         except IntegrityError as exc:
             self.repository.rollback()
 

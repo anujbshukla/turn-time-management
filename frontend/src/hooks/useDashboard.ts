@@ -14,9 +14,11 @@ export function useDashboard(
 
     const [loading, setLoading] = useState(true);
 
-    const [error, setError] = useState<string | null>(
-        null,
-    );
+    const [error, setError] =
+        useState<string | null>(null);
+
+    const [refreshKey, setRefreshKey] =
+        useState(0);
 
     useEffect(() => {
         let cancelled = false;
@@ -26,9 +28,8 @@ export function useDashboard(
             setError(null);
 
             try {
-                const response = await getDashboard(
-                    facilityId,
-                );
+                const response =
+                    await getDashboard(facilityId);
 
                 if (!cancelled) {
                     setDashboard(response);
@@ -53,11 +54,19 @@ export function useDashboard(
         return () => {
             cancelled = true;
         };
-    }, [facilityId]);
+    }, [facilityId, refreshKey]);
+
+    function refresh() {
+        setRefreshKey(
+            (currentRefreshKey) =>
+                currentRefreshKey + 1,
+        );
+    }
 
     return {
         dashboard,
         loading,
         error,
+        refresh,
     };
 }

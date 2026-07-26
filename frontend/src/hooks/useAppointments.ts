@@ -34,10 +34,14 @@ export function useAppointments(
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(
-    null,
-  );
+  const [refreshKey, setRefreshKey] =
+    useState(0);
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [error, setError] =
+    useState<string | null>(null);
 
   useEffect(() => {
     setPage(1);
@@ -61,16 +65,26 @@ export function useAppointments(
           await getPaginatedAppointments({
             page,
             pageSize,
-            facilityId: filters.facilityId,
-            status: filters.status,
-            riskLevel: filters.riskLevel,
-            outcome: filters.outcome,
-            search: filters.search,
+            facilityId:
+              filters.facilityId,
+            status:
+              filters.status,
+            riskLevel:
+              filters.riskLevel,
+            outcome:
+              filters.outcome,
+            search:
+              filters.search,
           });
 
         if (!cancelled) {
-          setAppointments(response.items);
-          setPagination(response.pagination);
+          setAppointments(
+            response.items,
+          );
+
+          setPagination(
+            response.pagination,
+          );
         }
       } catch (loadError) {
         if (!cancelled) {
@@ -98,13 +112,17 @@ export function useAppointments(
     filters.facilityId,
     filters.status,
     filters.riskLevel,
-    filters.search,
     filters.outcome,
+    filters.search,
+    refreshKey,
   ]);
 
   function goToPreviousPage() {
     setPage((currentPage) =>
-      Math.max(1, currentPage - 1),
+      Math.max(
+        1,
+        currentPage - 1,
+      ),
     );
   }
 
@@ -117,9 +135,17 @@ export function useAppointments(
     );
   }
 
-  function changePageSize(newPageSize: number) {
+  function changePageSize(
+    newPageSize: number,
+  ) {
     setPageSize(newPageSize);
     setPage(1);
+  }
+
+  function refresh() {
+    setRefreshKey(
+      (current) => current + 1,
+    );
   }
 
   return {
@@ -132,5 +158,6 @@ export function useAppointments(
     goToPreviousPage,
     goToNextPage,
     changePageSize,
+    refresh,
   };
 }

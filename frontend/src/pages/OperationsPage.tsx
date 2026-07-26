@@ -13,6 +13,7 @@ import {
   docks,
 } from "../data/dockData";
 
+import { useAppointmentDetails } from "../hooks/useAppointmentDetails";
 import { useAppointments } from "../hooks/useAppointments";
 import { useDashboard } from "../hooks/useDashboard";
 
@@ -39,18 +40,31 @@ export function OperationsPage() {
     goToPreviousPage,
     goToNextPage,
     changePageSize,
+    refresh: refreshAppointments,
   } = useAppointments(appointmentFilters);
+
+  const {
+    details: appointmentDetails,
+    loading: appointmentDetailsLoading,
+    error: appointmentDetailsError,
+    refresh: refreshAppointmentDetails,
+  } = useAppointmentDetails(
+    selectedAppointment?.appt_id,
+  );
 
   const {
     dashboard,
     loading: dashboardLoading,
     error: dashboardError,
+    refresh: refreshDashboard,
   } = useDashboard();
 
   const isDashboardLoading =
     dashboardLoading && !dashboard;
 
-  function handleRiskSelect(riskLevel: string) {
+  function handleRiskSelect(
+    riskLevel: string,
+  ) {
     setAppointmentFilters((current) => ({
       ...current,
       riskLevel:
@@ -61,7 +75,9 @@ export function OperationsPage() {
     }));
   }
 
-  function handleOutcomeSelect(outcome: string) {
+  function handleOutcomeSelect(
+    outcome: string,
+  ) {
     setAppointmentFilters((current) => ({
       ...current,
       outcome:
@@ -74,6 +90,12 @@ export function OperationsPage() {
 
   function clearAppointmentFilters() {
     setAppointmentFilters({});
+  }
+
+  function refreshOperationsData() {
+    refreshAppointmentDetails();
+    refreshAppointments();
+    refreshDashboard();
   }
 
   const dashboardKpis = [
@@ -172,7 +194,9 @@ export function OperationsPage() {
         appointmentFilters.outcome) && (
           <div className="active-filter-banner">
             <div>
-              <strong>Appointment filter:</strong>{" "}
+              <strong>
+                Appointment filter:
+              </strong>{" "}
               {appointmentFilters.riskLevel
                 ? `${appointmentFilters.riskLevel} risk`
                 : appointmentFilters.outcome}
@@ -180,7 +204,9 @@ export function OperationsPage() {
 
             <button
               type="button"
-              onClick={clearAppointmentFilters}
+              onClick={
+                clearAppointmentFilters
+              }
             >
               Clear filter
             </button>
@@ -194,9 +220,13 @@ export function OperationsPage() {
           pageSize={pageSize}
           loading={loading}
           error={error}
-          onPreviousPage={goToPreviousPage}
+          onPreviousPage={
+            goToPreviousPage
+          }
           onNextPage={goToNextPage}
-          onPageSizeChange={changePageSize}
+          onPageSizeChange={
+            changePageSize
+          }
           onAppointmentSelect={
             setSelectedAppointment
           }
@@ -206,14 +236,24 @@ export function OperationsPage() {
         />
 
         <BestNextAction
-          recommendation={currentRecommendation}
+          recommendation={
+            currentRecommendation
+          }
         />
       </section>
 
-      <DockUtilization docks={docks} />
+      <DockUtilization
+        docks={docks}
+      />
 
       <AppointmentDetailsDrawer
-        appointment={selectedAppointment}
+        selectedAppointment={
+          selectedAppointment
+        }
+        details={appointmentDetails}
+        loading={appointmentDetailsLoading}
+        error={appointmentDetailsError}
+        onRefresh={refreshOperationsData}
         onClose={() =>
           setSelectedAppointment(null)
         }
@@ -221,3 +261,5 @@ export function OperationsPage() {
     </>
   );
 }
+
+export default OperationsPage;

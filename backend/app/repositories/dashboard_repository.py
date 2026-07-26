@@ -27,13 +27,22 @@ class DashboardRepository:
                       )
                 ),
                 recommendation_usage AS (
-                    SELECT DISTINCT ar.appt_id
-                    FROM appointment_recommendations ar
-                    WHERE ar.status IN (
-                        'Accepted',
-                        'Completed'
-                    )
-                )
+    SELECT DISTINCT recommendation.appt_id
+
+    FROM appointment_recommendations recommendation
+
+    WHERE recommendation.status = 'Completed'
+
+       OR EXISTS (
+            SELECT 1
+            FROM recommendation_actions action
+            WHERE
+                action.recommendation_id =
+                    recommendation.recommendation_id
+                AND action.decision_status =
+                    'Accepted'
+        )
+)
                 SELECT
                     COUNT(*) AS total_appointments,
 
@@ -182,13 +191,22 @@ class DashboardRepository:
                       )
                 ),
                 recommendation_usage AS (
-                    SELECT DISTINCT appt_id
-                    FROM appointment_recommendations
-                    WHERE status IN (
-                        'Accepted',
-                        'Completed'
-                    )
-                )
+    SELECT DISTINCT recommendation.appt_id
+
+    FROM appointment_recommendations recommendation
+
+    WHERE recommendation.status = 'Completed'
+
+       OR EXISTS (
+            SELECT 1
+            FROM recommendation_actions action
+            WHERE
+                action.recommendation_id =
+                    recommendation.recommendation_id
+                AND action.decision_status =
+                    'Accepted'
+        )
+)
                 SELECT
                     COUNT(*) FILTER (
                         WHERE actual_sla_missed = FALSE

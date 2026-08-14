@@ -8,6 +8,8 @@ import type {
   AppointmentFilters,
   AppointmentListItem,
   AppointmentPagination,
+  AppointmentSortField,
+  SortDirection,
 } from "../types/appointments";
 
 const DEFAULT_PAGINATION: AppointmentPagination = {
@@ -33,6 +35,10 @@ export function useAppointments(
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [sortBy, setSortBy] =
+    useState<AppointmentSortField | undefined>(undefined);
+  const [sortDirection, setSortDirection] =
+    useState<SortDirection | undefined>(undefined);
 
   const [refreshKey, setRefreshKey] =
     useState(0);
@@ -47,6 +53,11 @@ export function useAppointments(
     setPage(1);
   }, [
     filters.facilityId,
+    filters.customerId,
+    filters.carrierId,
+    filters.appointmentType,
+    filters.dateFrom,
+    filters.dateTo,
     filters.status,
     filters.riskLevel,
     filters.outcome,
@@ -67,6 +78,16 @@ export function useAppointments(
             pageSize,
             facilityId:
               filters.facilityId,
+            customerId:
+              filters.customerId,
+            carrierId:
+              filters.carrierId,
+            appointmentType:
+              filters.appointmentType,
+            dateFrom:
+              filters.dateFrom,
+            dateTo:
+              filters.dateTo,
             status:
               filters.status,
             riskLevel:
@@ -75,6 +96,8 @@ export function useAppointments(
               filters.outcome,
             search:
               filters.search,
+            sortBy,
+            sortDirection,
           });
 
         if (!cancelled) {
@@ -110,10 +133,17 @@ export function useAppointments(
     page,
     pageSize,
     filters.facilityId,
+    filters.customerId,
+    filters.carrierId,
+    filters.appointmentType,
+    filters.dateFrom,
+    filters.dateTo,
     filters.status,
     filters.riskLevel,
     filters.outcome,
     filters.search,
+    sortBy,
+    sortDirection,
     refreshKey,
   ]);
 
@@ -142,6 +172,27 @@ export function useAppointments(
     setPage(1);
   }
 
+  function changeSort(
+    field: AppointmentSortField,
+  ) {
+    if (sortBy !== field) {
+      setSortBy(field);
+      setSortDirection("asc");
+      setPage(1);
+      return;
+    }
+
+    if (sortDirection === "asc") {
+      setSortDirection("desc");
+      setPage(1);
+      return;
+    }
+
+    setSortBy(undefined);
+    setSortDirection(undefined);
+    setPage(1);
+  }
+
   function refresh() {
     setRefreshKey(
       (current) => current + 1,
@@ -153,11 +204,14 @@ export function useAppointments(
     pagination,
     page,
     pageSize,
+    sortBy,
+    sortDirection,
     loading,
     error,
     goToPreviousPage,
     goToNextPage,
     changePageSize,
+    changeSort,
     refresh,
   };
 }

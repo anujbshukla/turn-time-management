@@ -75,6 +75,11 @@ export interface AppointmentEvent {
     event_type: string;
     event_time: string;
     notes: string | null;
+    performed_by: string | null;
+    field_name: string | null;
+    old_value: string | null;
+    new_value: string | null;
+    details_json: Record<string, unknown> | null;
 }
 
 export interface AppointmentPrediction {
@@ -155,6 +160,16 @@ export interface RecoverySummary {
 
     proposed_sla_recovered: boolean;
     accepted_sla_recovered: boolean;
+
+    completed_outcome: string;
+    is_completed: boolean;
+    was_late: boolean;
+    actual_sla_met: boolean;
+    actual_sla_missed: boolean;
+    recommendation_used: boolean;
+    accepted_action_count: number;
+    actual_turn_time_minutes: number | null;
+    sla_variance_minutes: number | null;
 }
 
 export interface AppointmentDetailsResponse {

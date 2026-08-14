@@ -1,6 +1,12 @@
 import type {
+  AppointmentFilterReferenceData,
   AppointmentQuery,
+  AppointmentReferenceData,
+  CreateAppointmentPayload,
+  CreateAppointmentResponse,
   PaginatedAppointmentsResponse,
+  UpdateAppointmentPayload,
+  UpdateAppointmentResponse,
 } from "../types/appointments";
 
 /* ----------------------------------------------------- */
@@ -64,6 +70,12 @@ export async function getPaginatedAppointments(
     );
   }
 
+  if (query.customerId) params.set("customer_id", query.customerId);
+  if (query.carrierId) params.set("carrier_id", query.carrierId);
+  if (query.appointmentType) params.set("appointment_type", query.appointmentType);
+  if (query.dateFrom) params.set("date_from", query.dateFrom);
+  if (query.dateTo) params.set("date_to", query.dateTo);
+
   if (query.status) {
     params.set(
       "status",
@@ -91,6 +103,11 @@ export async function getPaginatedAppointments(
       query.search.trim(),
     );
   }
+
+  if (query.sortBy && query.sortDirection) {
+    params.set("sort_by", query.sortBy);
+    params.set("sort_direction", query.sortDirection);
+  }
   const response = await fetch(
     `${API_BASE_URL}/api/appointments/paged?${params.toString()}`,
   );
@@ -101,5 +118,117 @@ export async function getPaginatedAppointments(
     );
   }
 
+  return response.json();
+}
+
+export async function getAppointmentReferenceData(): Promise<AppointmentReferenceData> {
+  const response = await fetch(`${API_BASE_URL}/api/appointments/reference-data/options`);
+  if (!response.ok) {
+    throw new Error(`Unable to load appointment options: ${response.status}`);
+  }
+  return response.json();
+}
+
+export async function getAppointmentFilterOptions(
+  query: Pick<
+    AppointmentQuery,
+    | "facilityId"
+    | "customerId"
+    | "carrierId"
+    | "appointmentType"
+    | "dateFrom"
+    | "dateTo"
+  >,
+  signal?: AbortSignal,
+): Promise<AppointmentFilterReferenceData> {
+  const params = new URLSearchParams();
+  if (query.facilityId) params.set("facility_id", query.facilityId);
+  if (query.customerId) params.set("customer_id", query.customerId);
+  if (query.carrierId) params.set("carrier_id", query.carrierId);
+  if (query.appointmentType) params.set("appointment_type", query.appointmentType);
+  if (query.dateFrom) params.set("date_from", query.dateFrom.split("T")[0]);
+  if (query.dateTo) params.set("date_to", query.dateTo.split("T")[0]);
+
+  const response = await fetch(
+    `${API_BASE_URL}/api/appointments/reference-data/filter-options?${params.toString()}`,
+    { signal },
+  );
+  if (!response.ok) {
+    throw new Error(`Unable to load cascading filter options: ${response.status}`);
+  }
+
+  const payload = await response.json();
+  return {
+    facilities: payload.facilities ?? [],
+    customers: payload.customers ?? [],
+    carriers: payload.carriers ?? [],
+    appointmentTypes: payload.appointment_types ?? [],
+  };
+}
+
+export async function createAppointment(
+  payload: CreateAppointmentPayload,
+): Promise<CreateAppointmentResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/appointments`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const rawBody = await response.text();
+    let message = `Unable to create appointment: ${response.status}`;
+
+    if (rawBody) {
+      try {
+        const body = JSON.parse(rawBody);
+
+        if (typeof body?.message === "string") {
+          message = body.message;
+        } else if (typeof body?.detail === "string") {
+          message = body.detail;
+        } else if (Array.isArray(body?.detail)) {
+          message = body.detail
+            .map((item: { loc?: unknown[]; msg?: string }) => {
+              const location = item.loc?.slice(1).join(".") || "request";
+              return `${location}: ${item.msg ?? "Invalid value"}`;
+            })
+            .join("; ");
+        }
+      } catch {
+        message = rawBody;
+      }
+    }
+
+    throw new Error(message);
+  }
+
+  return response.json();
+}
+
+
+export async function updateAppointment(
+  appointmentId: string,
+  payload: UpdateAppointmentPayload,
+): Promise<UpdateAppointmentResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/appointments/${appointmentId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const rawBody = await response.text();
+    let message = `Unable to update appointment: ${response.status}`;
+    if (rawBody) {
+      try {
+        const body = JSON.parse(rawBody);
+        message = body?.message ?? body?.detail ?? message;
+      } catch {
+        message = rawBody;
+      }
+    }
+    throw new Error(message);
+  }
   return response.json();
 }

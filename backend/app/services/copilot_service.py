@@ -8,7 +8,15 @@ from app.repositories.appointment_repository import (
     AppointmentRepository,
 )
 from app.schemas import AppointmentCopilotRequest
+from app.schemas import (
+    AppointmentCopilotRequest,
+    CopilotActionIntent,
+    CopilotActionType,
+)
 
+from app.services.copilot_intent_detector import (
+    CopilotIntentDetector,
+)
 
 class CopilotService:
     def __init__(
@@ -16,6 +24,319 @@ class CopilotService:
         repository: AppointmentRepository,
     ) -> None:
         self.repository = repository
+
+        self.intent_detector = (
+            CopilotIntentDetector()
+        )
+    def _build_action_response(
+        self,
+        *,
+        appt_id: str,
+        intent: CopilotActionIntent,
+        appointment: dict[str, Any],
+        actions: list[dict[str, Any]],
+        recovery: dict[str, Any],
+        simulation: dict[str, Any] | None,
+    ) -> dict[str, Any]:
+        facts = self._build_action_facts(
+            intent=intent,
+            actions=actions,
+            recovery=recovery,
+            simulation=simulation,
+        )
+
+        suggested_questions = (
+            self._build_action_suggestions(
+                intent
+            )
+        )
+
+        return {
+            "appt_id": appt_id,
+            "mode": "action",
+            "answer": intent.response_message,
+            "facts": facts,
+            "suggested_questions":
+                suggested_questions,
+            "action_intent": intent,
+        }
+    
+    def _build_action_facts(
+        self,
+        *,
+        intent: CopilotActionIntent,
+        actions: list[dict[str, Any]],
+        recovery: dict[str, Any],
+        simulation: dict[str, Any] | None,
+    ) -> list[dict[str, str]]:
+        facts: list[dict[str, str]] = []
+
+        action_lookup = {
+            int(
+                action[
+                    "recommendation_action_id"
+                ]
+            ): action
+            for action in actions
+        }
+
+        selected_actions = [
+            action_lookup[action_id]
+            for action_id in intent.action_ids
+            if action_id in action_lookup
+        ]
+
+        if selected_actions:
+            total_minutes_saved = sum(
+                float(
+                    action.get(
+                        "estimated_minutes_saved",
+                        0,
+                    )
+                    or 0
+                )
+                for action in selected_actions
+            )
+
+            total_action_cost = sum(
+                float(
+                    action.get(
+                        "estimated_action_cost",
+                        0,
+                    )
+                    or 0
+                )
+                for action in selected_actions
+            )
+
+            facts.extend(
+                [
+                    {
+                        "label":
+                            "Selected actions",
+                        "value": str(
+                            len(selected_actions)
+                        ),
+                    },
+                    {
+                        "label":
+                            "Estimated recovery",
+                        "value": (
+                            f"{total_minutes_saved:g} min"
+                        ),
+                    },
+                    {
+                        "label":
+                            "Estimated action cost",
+                        "value": (
+                            f"${total_action_cost:,.2f}"
+                        ),
+                    },
+                ]
+            )
+
+        if (
+            intent.action
+            == CopilotActionType.RUN_WHAT_IF
+        ):
+            if (
+                "extra_loaders"
+                in intent.metadata
+            ):
+                facts.append(
+                    {
+                        "label": "Extra loaders",
+                        "value": intent.metadata[
+                            "extra_loaders"
+                        ],
+                    }
+                )
+
+            if (
+                "extra_forklifts"
+                in intent.metadata
+            ):
+                facts.append(
+                    {
+                        "label":
+                            "Extra forklifts",
+                        "value": intent.metadata[
+                            "extra_forklifts"
+                        ],
+                    }
+                )
+
+            if (
+                intent.metadata.get(
+                    "pre_stage_products"
+                )
+                == "true"
+            ):
+                facts.append(
+                    {
+                        "label":
+                            "Product staging",
+                        "value": "Enabled",
+                    }
+                )
+
+        if (
+            intent.action
+            == CopilotActionType
+            .FILTER_APPOINTMENTS
+        ):
+            if "risk_level" in intent.metadata:
+                facts.append(
+                    {
+                        "label": "Risk filter",
+                        "value": intent.metadata[
+                            "risk_level"
+                        ],
+                    }
+                )
+
+            if "status" in intent.metadata:
+                facts.append(
+                    {
+                        "label": "Status filter",
+                        "value": intent.metadata[
+                            "status"
+                        ],
+                    }
+                )
+
+            if (
+                "facility_id"
+                in intent.metadata
+            ):
+                facts.append(
+                    {
+                        "label":
+                            "Facility filter",
+                        "value": intent.metadata[
+                            "facility_id"
+                        ],
+                    }
+                )
+
+        if (
+            intent.action
+            == CopilotActionType
+            .OPEN_APPOINTMENT
+            and "appt_id" in intent.metadata
+        ):
+            facts.append(
+                {
+                    "label":
+                        "Appointment to open",
+                    "value": intent.metadata[
+                        "appt_id"
+                    ],
+                }
+            )
+
+        if simulation is not None:
+            scenario = simulation["scenario"]
+
+            facts.extend(
+                [
+                    {
+                        "label":
+                            "Simulated turn",
+                        "value": (
+                            f"{scenario[
+                                'projected_turn_time_minutes'
+                            ]} min"
+                        ),
+                    },
+                    {
+                        "label":
+                            "Simulated SLA",
+                        "value": (
+                            "Recovered"
+                            if scenario[
+                                "sla_recovered"
+                            ]
+                            else "At risk"
+                        ),
+                    },
+                ]
+            )
+
+        if not facts:
+            facts.append(
+                {
+                    "label": "Action",
+                    "value": (
+                        intent.action.value
+                        .replace("_", " ")
+                        .title()
+                    ),
+                }
+            )
+
+        return facts
+
+    def _build_action_suggestions(
+        self,
+        intent: CopilotActionIntent,
+    ) -> list[str]:
+        if intent.confirmation_required:
+            return [
+                "Confirm this action.",
+                "Cancel this action.",
+                (
+                    "Show me the expected "
+                    "operational impact."
+                ),
+            ]
+
+        if (
+            intent.action
+            == CopilotActionType.RUN_WHAT_IF
+        ):
+            return [
+                (
+                    "What is the projected "
+                    "turn time?"
+                ),
+                (
+                    "Will this scenario recover "
+                    "the SLA?"
+                ),
+                (
+                    "Which action contributes "
+                    "the most?"
+                ),
+            ]
+
+        if (
+            intent.action
+            == CopilotActionType
+            .FILTER_APPOINTMENTS
+        ):
+            return [
+                "Clear the appointment filter.",
+                (
+                    "Show only Critical "
+                    "appointments."
+                ),
+                (
+                    "Show Completed "
+                    "appointments."
+                ),
+            ]
+
+        return [
+            (
+                "Why is this appointment "
+                "at risk?"
+            ),
+            (
+                "Which recovery action has "
+                "the highest impact?"
+            ),
+        ]
 
     def answer(
         self,
@@ -32,62 +353,110 @@ class CopilotService:
                 message="Appointment not found",
                 code="APPOINTMENT_NOT_FOUND",
                 status_code=404,
-                details={"appt_id": appt_id},
+                details={
+                    "appt_id": appt_id,
+                },
             )
 
         appointment = details["appointment"]
+
         prediction = details["prediction"]
+
         actions = details[
             "recommendation_actions"
         ]
+
         products = details["products"]
+
         recovery = details["recovery_summary"]
 
-        question = payload.question.strip().lower()
+        question = payload.question.strip()
+
+        normalized_question = (
+            question.lower()
+        )
+
         conversation_history = [
             message.model_dump()
-            for message in payload.conversation_history
+            for message in (
+                payload.conversation_history
+            )
         ]
+
         simulation = None
 
         if (
             payload.what_if is not None
             and prediction is not None
         ):
-            simulation = WhatIfEngine().simulate(
+            try:
+                simulation = WhatIfEngine().simulate(
+                    appointment=appointment,
+                    prediction=prediction,
+                    actions=actions,
+                    selected_action_ids=(
+                        payload.what_if
+                        .selected_action_ids
+                    ),
+                    extra_loaders=(
+                        payload.what_if
+                        .extra_loaders
+                    ),
+                    extra_forklifts=(
+                        payload.what_if
+                        .extra_forklifts
+                    ),
+                    pre_stage_products=(
+                        payload.what_if
+                        .pre_stage_products
+                    ),
+                )
+            except ValueError as exc:
+                raise AppError(
+                    message=str(exc),
+                    code=(
+                        "COPILOT_SIMULATION_FAILED"
+                    ),
+                    status_code=400,
+                    details={
+                        "appt_id": appt_id,
+                    },
+                ) from exc
+
+        intent = self.intent_detector.detect(
+            question=question,
+            actions=actions,
+        )
+
+        if (
+            intent.action
+            != CopilotActionType.ANSWER
+        ):
+            return self._build_action_response(
+                appt_id=appt_id,
+                intent=intent,
                 appointment=appointment,
-                prediction=prediction,
                 actions=actions,
-                selected_action_ids=(
-                    payload.what_if
-                    .selected_action_ids
-                ),
-                extra_loaders=(
-                    payload.what_if.extra_loaders
-                ),
-                extra_forklifts=(
-                    payload.what_if
-                    .extra_forklifts
-                ),
-                pre_stage_products=(
-                    payload.what_if
-                    .pre_stage_products
-                ),
+                recovery=recovery,
+                simulation=simulation,
             )
 
         answer = self._build_answer(
-    question=question,
-    appointment=appointment,
-    prediction=prediction,
-    products=products,
-    actions=actions,
-    recovery=recovery,
-    simulation=simulation,
-    conversation_history=conversation_history,
-)
+            question=normalized_question,
+            appointment=appointment,
+            prediction=prediction,
+            products=products,
+            actions=actions,
+            recovery=recovery,
+            simulation=simulation,
+            conversation_history=(
+                conversation_history
+            ),
+        )
 
         return {
             "appt_id": appt_id,
+            "mode": "answer",
             "answer": answer,
             "facts": self._build_facts(
                 appointment=appointment,
@@ -96,12 +465,28 @@ class CopilotService:
                 simulation=simulation,
             ),
             "suggested_questions": [
-                "Why is this appointment at risk?",
-                "Which recovery action has the highest impact?",
-                "Can we meet SLA without extra labor?",
-                "What is the projected detention savings?",
-                "Summarize this appointment.",
+                (
+                    "Why is this appointment "
+                    "at risk?"
+                ),
+                (
+                    "Which recovery action has "
+                    "the highest impact?"
+                ),
+                (
+                    "Can we meet SLA without "
+                    "extra labor?"
+                ),
+                (
+                    "What is the projected "
+                    "detention savings?"
+                ),
+                (
+                    "Accept the highest-impact "
+                    "action."
+                ),
             ],
+            "action_intent": None,
         }
     def _detect_intent(
         self,

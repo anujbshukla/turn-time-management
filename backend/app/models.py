@@ -1,3 +1,4 @@
+from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import DateTime, String
@@ -6,6 +7,14 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 
 from sqlalchemy import Boolean, Column, ForeignKey, String
+
+class Customer(Base):
+    __tablename__ = "customers"
+
+    customer_id: Mapped[str] = mapped_column(
+        String(100),
+        primary_key=True,
+    )
 
 class Facility(Base):
     __tablename__ = "facilities"
@@ -82,6 +91,14 @@ class Dock(Base):
         default=True,
         nullable=False,
     )
+class Product(Base):
+    __tablename__ = "products"
+
+    product_id: Mapped[str] = mapped_column(
+        String(50),
+        primary_key=True,
+    )
+
 
 from datetime import date, datetime
 from decimal import Decimal

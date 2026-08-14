@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+from datetime import date, datetime, timezone
 from typing import Any
 
 from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from app.models import Appointment
+from app.repositories.outcome_rules import outcome_filter_sql
 
 
 class AppointmentRepository:
@@ -18,17 +20,64 @@ class AppointmentRepository:
         page: int = 1,
         page_size: int = 10,
         facility_id: str | None = None,
+        customer_id: str | None = None,
+        carrier_id: str | None = None,
+        appointment_type: str | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
         status: str | None = None,
         risk_level: str | None = None,
         outcome: str | None = None,
         search: str | None = None,
+        sort_by: str | None = None,
+        sort_direction: str | None = None,
     ) -> dict[str, Any]:
         offset = (page - 1) * page_size
+        shared_outcome_filter = outcome_filter_sql("a")
+
+        sort_expressions = {
+            "appt_id": "a.appt_id",
+            "customer_name": "a.customer_name",
+            "facility_name": "f.facility_name",
+            "carrier_name": "c.carrier_name",
+            "scheduled_time": "a.scheduled_time",
+            "status": (
+                "CASE a.status "
+                "WHEN 'Scheduled' THEN 1 "
+                "WHEN 'En Route' THEN 2 "
+                "WHEN 'Arrived' THEN 3 "
+                "WHEN 'Waiting' THEN 4 "
+                "WHEN 'Dock Assigned' THEN 5 "
+                "WHEN 'In Progress' THEN 6 "
+                "WHEN 'Completed' THEN 7 "
+                "ELSE 99 END"
+            ),
+            "turn_risk_score": "p.turn_risk_score",
+        }
+
+        direction = (sort_direction or "").lower()
+        if sort_by in sort_expressions and direction in {"asc", "desc"}:
+            nulls = "NULLS LAST"
+            order_by_clause = (
+                f"{sort_expressions[sort_by]} {direction.upper()} {nulls}, "
+                "a.appt_id ASC"
+            )
+        else:
+            order_by_clause = (
+                "p.turn_risk_score DESC NULLS LAST, "
+                "a.scheduled_time ASC, "
+                "a.appt_id ASC"
+            )
 
         parameters = {
             "page_size": page_size,
             "offset": offset,
             "facility_id": facility_id,
+            "customer_id": customer_id,
+            "carrier_id": carrier_id,
+            "appointment_type": appointment_type,
+            "date_from": date_from,
+            "date_to": date_to,
             "status": status,
             "risk_level": risk_level,
             "outcome": outcome,
@@ -105,125 +154,85 @@ class AppointmentRepository:
 
                   AND (
                       CAST(:facility_id AS VARCHAR) IS NULL
-                      OR a.facility_id = :facility_id
+                      OR a.facility_id = CAST(:facility_id AS VARCHAR)
+                  )
+
+
+                  AND (
+                      CAST(:customer_id AS VARCHAR) IS NULL
+                      OR a.customer_id = CAST(:customer_id AS VARCHAR)
+                  )
+
+                  AND (
+                      CAST(:carrier_id AS VARCHAR) IS NULL
+                      OR a.carrier_id = CAST(:carrier_id AS VARCHAR)
+                  )
+
+                  AND (
+                      CAST(:appointment_type AS VARCHAR) IS NULL
+                      OR LOWER(a.appointment_type) =
+                         LOWER(CAST(:appointment_type AS VARCHAR))
+                  )
+
+                  AND (
+                      CAST(:date_from AS DATE) IS NULL
+                      OR a.scheduled_time >= CAST(:date_from AS DATE)
+                  )
+
+                  AND (
+                      CAST(:date_to AS DATE) IS NULL
+                      OR a.scheduled_time < CAST(:date_to AS DATE)
                   )
 
                   AND (
                       CAST(:status AS VARCHAR) IS NULL
-                      OR a.status = :status
+                      OR a.status = CAST(:status AS VARCHAR)
                   )
 
                   AND (
                       CAST(:search AS VARCHAR) IS NULL
-                      OR a.appt_id ILIKE :search
-                      OR a.customer_name ILIKE :search
-                      OR c.carrier_name ILIKE :search
+                      OR a.appt_id ILIKE CAST(:search AS VARCHAR)
+                      OR a.customer_name ILIKE CAST(:search AS VARCHAR)
+                      OR c.carrier_name ILIKE CAST(:search AS VARCHAR)
                   )
 
                   AND (
                       CAST(:risk_level AS VARCHAR) IS NULL
 
                       OR (
-                          :risk_level = 'Low'
+                          CAST(:risk_level AS VARCHAR) = 'Low'
                           AND p.turn_risk_score < 30
                       )
 
                       OR (
-                          :risk_level = 'Medium'
+                          CAST(:risk_level AS VARCHAR) = 'Medium'
                           AND p.turn_risk_score >= 30
                           AND p.turn_risk_score < 60
                       )
 
                       OR (
-                          :risk_level = 'High'
+                          CAST(:risk_level AS VARCHAR) = 'High'
                           AND p.turn_risk_score >= 60
                           AND p.turn_risk_score < 80
                       )
 
                       OR (
-                          :risk_level = 'Critical'
+                          CAST(:risk_level AS VARCHAR) = 'Critical'
                           AND p.turn_risk_score >= 80
                       )
                   )
 
-                  AND (
-                      CAST(:outcome AS VARCHAR) IS NULL
-
-                      OR (
-                          :outcome =
-                              'Recovered with recommendations'
-                          AND a.status = 'Completed'
-                          AND a.actual_arrival_delay_minutes > 0
-                          AND a.actual_sla_missed = FALSE
-                          AND EXISTS (
-    SELECT 1
-
-    FROM appointment_recommendations outcome_r
-
-    WHERE outcome_r.appt_id = a.appt_id
-
-      AND (
-          outcome_r.status = 'Completed'
-
-          OR EXISTS (
-              SELECT 1
-              FROM recommendation_actions
-                  outcome_action
-              WHERE
-                  outcome_action.recommendation_id =
-                      outcome_r.recommendation_id
-                  AND outcome_action.decision_status =
-                      'Accepted'
-          )
-      )
-)
-                      )
-
-                      OR (
-                          :outcome =
-                              'Recovered without recommendations'
-                          AND a.status = 'Completed'
-                          AND a.actual_arrival_delay_minutes > 0
-                          AND a.actual_sla_missed = FALSE
-                          AND NOT EXISTS (
-    SELECT 1
-
-    FROM appointment_recommendations outcome_r
-
-    WHERE outcome_r.appt_id = a.appt_id
-
-      AND (
-          outcome_r.status = 'Completed'
-
-          OR EXISTS (
-              SELECT 1
-              FROM recommendation_actions
-                  outcome_action
-              WHERE
-                  outcome_action.recommendation_id =
-                      outcome_r.recommendation_id
-                  AND outcome_action.decision_status =
-                      'Accepted'
-          )
-      )
-)
-                      )
-
-                      OR (
-                          :outcome = 'Missed SLA'
-                          AND a.status = 'Completed'
-                          AND a.actual_arrival_delay_minutes > 0
-                          AND a.actual_sla_missed = TRUE
-                      )
-                  )
+                  {shared_outcome_filter}
 
                 ORDER BY
-                    p.turn_risk_score DESC NULLS LAST,
-                    a.scheduled_time ASC
+                    {order_by_clause}
 
                 LIMIT :page_size
                 OFFSET :offset;
-                """
+                """.format(
+                    order_by_clause=order_by_clause,
+                    shared_outcome_filter=shared_outcome_filter,
+                )
             ),
             parameters,
         ).mappings().all()
@@ -250,118 +259,78 @@ class AppointmentRepository:
 
                   AND (
                       CAST(:facility_id AS VARCHAR) IS NULL
-                      OR a.facility_id = :facility_id
+                      OR a.facility_id = CAST(:facility_id AS VARCHAR)
+                  )
+
+
+                  AND (
+                      CAST(:customer_id AS VARCHAR) IS NULL
+                      OR a.customer_id = CAST(:customer_id AS VARCHAR)
+                  )
+
+                  AND (
+                      CAST(:carrier_id AS VARCHAR) IS NULL
+                      OR a.carrier_id = CAST(:carrier_id AS VARCHAR)
+                  )
+
+                  AND (
+                      CAST(:appointment_type AS VARCHAR) IS NULL
+                      OR LOWER(a.appointment_type) =
+                         LOWER(CAST(:appointment_type AS VARCHAR))
+                  )
+
+                  AND (
+                      CAST(:date_from AS DATE) IS NULL
+                      OR a.scheduled_time >= CAST(:date_from AS DATE)
+                  )
+
+                  AND (
+                      CAST(:date_to AS DATE) IS NULL
+                      OR a.scheduled_time < CAST(:date_to AS DATE)
                   )
 
                   AND (
                       CAST(:status AS VARCHAR) IS NULL
-                      OR a.status = :status
+                      OR a.status = CAST(:status AS VARCHAR)
                   )
 
                   AND (
                       CAST(:search AS VARCHAR) IS NULL
-                      OR a.appt_id ILIKE :search
-                      OR a.customer_name ILIKE :search
-                      OR c.carrier_name ILIKE :search
+                      OR a.appt_id ILIKE CAST(:search AS VARCHAR)
+                      OR a.customer_name ILIKE CAST(:search AS VARCHAR)
+                      OR c.carrier_name ILIKE CAST(:search AS VARCHAR)
                   )
 
                   AND (
                       CAST(:risk_level AS VARCHAR) IS NULL
 
                       OR (
-                          :risk_level = 'Low'
+                          CAST(:risk_level AS VARCHAR) = 'Low'
                           AND p.turn_risk_score < 30
                       )
 
                       OR (
-                          :risk_level = 'Medium'
+                          CAST(:risk_level AS VARCHAR) = 'Medium'
                           AND p.turn_risk_score >= 30
                           AND p.turn_risk_score < 60
                       )
 
                       OR (
-                          :risk_level = 'High'
+                          CAST(:risk_level AS VARCHAR) = 'High'
                           AND p.turn_risk_score >= 60
                           AND p.turn_risk_score < 80
                       )
 
                       OR (
-                          :risk_level = 'Critical'
+                          CAST(:risk_level AS VARCHAR) = 'Critical'
                           AND p.turn_risk_score >= 80
                       )
                   )
 
-                  AND (
-                      CAST(:outcome AS VARCHAR) IS NULL
-
-                      OR (
-                          :outcome =
-                              'Recovered with recommendations'
-                          AND a.status = 'Completed'
-                          AND a.actual_arrival_delay_minutes > 0
-                          AND a.actual_sla_missed = FALSE
-                          AND EXISTS (
-    SELECT 1
-
-    FROM appointment_recommendations outcome_r
-
-    WHERE outcome_r.appt_id = a.appt_id
-
-      AND (
-          outcome_r.status = 'Completed'
-
-          OR EXISTS (
-              SELECT 1
-              FROM recommendation_actions
-                  outcome_action
-              WHERE
-                  outcome_action.recommendation_id =
-                      outcome_r.recommendation_id
-                  AND outcome_action.decision_status =
-                      'Accepted'
-          )
-      )
-)
-                      )
-
-                      OR (
-                          :outcome =
-                              'Recovered without recommendations'
-                          AND a.status = 'Completed'
-                          AND a.actual_arrival_delay_minutes > 0
-                          AND a.actual_sla_missed = FALSE
-                          AND NOT EXISTS (
-    SELECT 1
-
-    FROM appointment_recommendations outcome_r
-
-    WHERE outcome_r.appt_id = a.appt_id
-
-      AND (
-          outcome_r.status = 'Completed'
-
-          OR EXISTS (
-              SELECT 1
-              FROM recommendation_actions
-                  outcome_action
-              WHERE
-                  outcome_action.recommendation_id =
-                      outcome_r.recommendation_id
-                  AND outcome_action.decision_status =
-                      'Accepted'
-          )
-      )
-)
-                      )
-
-                      OR (
-                          :outcome = 'Missed SLA'
-                          AND a.status = 'Completed'
-                          AND a.actual_arrival_delay_minutes > 0
-                          AND a.actual_sla_missed = TRUE
-                      )
-                  );
-                """
+                  {shared_outcome_filter};
+                """.format(
+                    shared_outcome_filter=shared_outcome_filter,
+                )
             ),
             parameters,
         ).scalar_one()
@@ -519,7 +488,12 @@ class AppointmentRepository:
                     event_id,
                     event_type,
                     event_time,
-                    notes
+                    notes,
+                    performed_by,
+                    field_name,
+                    old_value,
+                    new_value,
+                    details_json
 
                 FROM appointment_events
 
@@ -581,7 +555,19 @@ class AppointmentRepository:
                                 )
                             ELSE ''
                         END
-                    ) AS notes
+                    ) AS notes,
+
+                    action.decision_by AS performed_by,
+                    'recommendation_action' AS field_name,
+                    NULL::TEXT AS old_value,
+                    action.decision_status AS new_value,
+                    jsonb_build_object(
+                        'action_id', action.recommendation_action_id,
+                        'action_code', action.action_code,
+                        'action_title', action.action_title,
+                        'minutes_saved', action.estimated_minutes_saved,
+                        'decision_notes', action.decision_notes
+                    ) AS details_json
 
                 FROM recommendation_actions action
 
@@ -828,6 +814,74 @@ class AppointmentRepository:
             <= sla_minutes
         )
 
+        accepted_actions = [
+            action
+            for action in actions
+            if action.get("decision_status") == "Accepted"
+        ]
+
+        is_completed = (
+            appointment_dict.get("status") == "Completed"
+        )
+        actual_turn_time = appointment_dict.get(
+            "actual_turn_time_minutes"
+        )
+        actual_arrival_delay = (
+            appointment_dict.get(
+                "actual_arrival_delay_minutes"
+            )
+            or 0
+        )
+        was_late = actual_arrival_delay > 0
+        recommendation_used = bool(accepted_actions) or (
+            recommendation_dict is not None
+            and recommendation_dict.get("status")
+            in {"Accepted", "Completed"}
+        )
+
+        actual_sla_met = (
+            is_completed
+            and actual_turn_time is not None
+            and actual_turn_time <= sla_minutes
+        )
+        actual_sla_missed = (
+            is_completed
+            and (
+                (
+                    actual_turn_time is not None
+                    and actual_turn_time > sla_minutes
+                )
+                or (
+                    actual_turn_time is None
+                    and appointment_dict.get(
+                        "actual_sla_missed"
+                    )
+                    is True
+                )
+            )
+        )
+
+        completed_outcome = "Not completed"
+        if is_completed:
+            if actual_sla_missed:
+                completed_outcome = "Missed SLA"
+            elif was_late and actual_sla_met:
+                completed_outcome = (
+                    "Recovered with recommendations"
+                    if recommendation_used
+                    else "Recovered without recommendations"
+                )
+            elif actual_sla_met:
+                completed_outcome = "Completed within SLA"
+            else:
+                completed_outcome = "Completed outcome unavailable"
+
+        sla_variance_minutes = (
+            actual_turn_time - sla_minutes
+            if actual_turn_time is not None
+            else None
+        )
+
         return {
             "appointment": appointment_dict,
 
@@ -892,10 +946,477 @@ class AppointmentRepository:
                 "pending_minutes_saved":
                     pending_minutes_saved,
 
+                # Canonical completed-outcome view used by
+                # the chart, table and appointment drawer.
+                "completed_outcome": completed_outcome,
+                "is_completed": is_completed,
+                "was_late": was_late,
+                "actual_sla_met": actual_sla_met,
+                "actual_sla_missed": actual_sla_missed,
+                "recommendation_used": recommendation_used,
+                "accepted_action_count": len(accepted_actions),
+                "actual_turn_time_minutes": actual_turn_time,
+                "sla_variance_minutes": sla_variance_minutes,
+
                 "sla_minutes":
                     sla_minutes,
             },
         }
+
+    def get_reference_data(self) -> dict[str, list[dict[str, str | None]]]:
+        facilities = self.db.execute(text("""
+            SELECT facility_id AS id, facility_name AS label, NULL::VARCHAR AS facility_id
+            FROM facilities WHERE active = TRUE ORDER BY facility_name;
+        """)).mappings().all()
+        customers = self.db.execute(text("""
+            SELECT customer_id AS id, customer_name AS label, NULL::VARCHAR AS facility_id
+            FROM customers ORDER BY customer_name;
+        """)).mappings().all()
+        carriers = self.db.execute(text("""
+            SELECT carrier_id AS id, carrier_name AS label, NULL::VARCHAR AS facility_id
+            FROM carriers WHERE active = TRUE ORDER BY carrier_name;
+        """)).mappings().all()
+        docks = self.db.execute(text("""
+            SELECT dock_id AS id, dock_name AS label, facility_id
+            FROM docks WHERE active = TRUE ORDER BY facility_id, dock_name;
+        """)).mappings().all()
+        products = self.db.execute(text("""
+            SELECT
+                product_id AS id,
+                CONCAT(product_name, ' · ', sku) AS label,
+                sku,
+                category,
+                unit_of_measure,
+                unit_weight_lb,
+                unit_volume_cuft,
+                units_per_case,
+                cases_per_pallet
+            FROM products
+            WHERE active = TRUE
+            ORDER BY product_name, sku;
+        """)).mappings().all()
+        return {
+            "facilities": [dict(row) for row in facilities],
+            "customers": [dict(row) for row in customers],
+            "carriers": [dict(row) for row in carriers],
+            "docks": [dict(row) for row in docks],
+            "products": [dict(row) for row in products],
+        }
+
+    def get_filter_reference_data(
+        self,
+        *,
+        facility_id: str | None = None,
+        customer_id: str | None = None,
+        carrier_id: str | None = None,
+        appointment_type: str | None = None,
+        date_from: date | None = None,
+        date_to: date | None = None,
+    ) -> dict[str, list[dict[str, str | None]]]:
+        """Return cascading dashboard filter choices.
+
+        Each option list applies every active filter except its own dimension,
+        so a selected value in one slicer immediately removes values from the
+        other slicers that have no matching appointments.
+        """
+
+        def build_conditions(exclude: str) -> tuple[str, dict[str, object]]:
+            conditions = ["a.appt_id LIKE 'DEMO%'"]
+            params: dict[str, object] = {}
+
+            if exclude != "facility" and facility_id:
+                conditions.append("a.facility_id = :facility_id")
+                params["facility_id"] = facility_id
+            if exclude != "customer" and customer_id:
+                conditions.append("a.customer_id = :customer_id")
+                params["customer_id"] = customer_id
+            if exclude != "carrier" and carrier_id:
+                conditions.append("a.carrier_id = :carrier_id")
+                params["carrier_id"] = carrier_id
+            if exclude != "appointment_type" and appointment_type:
+                conditions.append("LOWER(a.appointment_type) = LOWER(:appointment_type)")
+                params["appointment_type"] = appointment_type
+            if date_from:
+                conditions.append("a.scheduled_time >= :date_from")
+                params["date_from"] = date_from
+            if date_to:
+                conditions.append("a.scheduled_time < :date_to")
+                params["date_to"] = date_to
+
+            return " AND ".join(conditions), params
+
+        facility_where, facility_params = build_conditions("facility")
+        customer_where, customer_params = build_conditions("customer")
+        carrier_where, carrier_params = build_conditions("carrier")
+        type_where, type_params = build_conditions("appointment_type")
+
+        facilities = self.db.execute(
+            text(f"""
+                SELECT DISTINCT
+                    a.facility_id AS id,
+                    f.facility_name AS label,
+                    NULL::VARCHAR AS facility_id
+                FROM appointments a
+                JOIN facilities f ON f.facility_id = a.facility_id
+                WHERE {facility_where}
+                  AND f.active = TRUE
+                ORDER BY label;
+            """),
+            facility_params,
+        ).mappings().all()
+
+        customers = self.db.execute(
+            text(f"""
+                SELECT DISTINCT
+                    a.customer_id AS id,
+                    COALESCE(c.customer_name, a.customer_name, a.customer_id) AS label,
+                    NULL::VARCHAR AS facility_id
+                FROM appointments a
+                LEFT JOIN customers c ON c.customer_id = a.customer_id
+                WHERE {customer_where}
+                  AND a.customer_id IS NOT NULL
+                ORDER BY label;
+            """),
+            customer_params,
+        ).mappings().all()
+
+        carriers = self.db.execute(
+            text(f"""
+                SELECT DISTINCT
+                    a.carrier_id AS id,
+                    COALESCE(c.carrier_name, a.carrier_id) AS label,
+                    NULL::VARCHAR AS facility_id
+                FROM appointments a
+                LEFT JOIN carriers c ON c.carrier_id = a.carrier_id
+                WHERE {carrier_where}
+                  AND a.carrier_id IS NOT NULL
+                ORDER BY label;
+            """),
+            carrier_params,
+        ).mappings().all()
+
+        appointment_types = self.db.execute(
+            text(f"""
+                SELECT DISTINCT
+                    a.appointment_type AS id,
+                    a.appointment_type AS label,
+                    NULL::VARCHAR AS facility_id
+                FROM appointments a
+                WHERE {type_where}
+                  AND a.appointment_type IN ('Inbound', 'Outbound')
+                ORDER BY label;
+            """),
+            type_params,
+        ).mappings().all()
+
+        return {
+            "facilities": [dict(row) for row in facilities],
+            "customers": [dict(row) for row in customers],
+            "carriers": [dict(row) for row in carriers],
+            "appointment_types": [dict(row) for row in appointment_types],
+        }
+
+    def generate_next_demo_id(self) -> str:
+        value = self.db.execute(text("""
+            SELECT COALESCE(MAX(CAST(SUBSTRING(appt_id FROM 5) AS INTEGER)), 0) + 1
+            FROM appointments
+            WHERE appt_id ~ '^DEMO[0-9]+$';
+        """)).scalar_one()
+        return f"DEMO{int(value):07d}"
+
+    def validate_references(
+        self,
+        *,
+        facility_id: str,
+        customer_id: str | None,
+        carrier_id: str | None,
+        dock_id: str | None,
+    ) -> dict[str, str | None]:
+        facility = self.db.execute(text("SELECT facility_name FROM facilities WHERE facility_id=:id AND active=TRUE"), {"id": facility_id}).scalar_one_or_none()
+        if facility is None:
+            raise ValueError("Selected facility is unavailable.")
+        customer = None
+        if customer_id:
+            customer = self.db.execute(text("SELECT customer_name FROM customers WHERE customer_id=:id"), {"id": customer_id}).scalar_one_or_none()
+            if customer is None:
+                raise ValueError("Selected customer was not found.")
+        carrier = None
+        if carrier_id:
+            carrier = self.db.execute(text("SELECT carrier_name FROM carriers WHERE carrier_id=:id AND active=TRUE"), {"id": carrier_id}).scalar_one_or_none()
+            if carrier is None:
+                raise ValueError("Selected carrier is unavailable.")
+        if dock_id:
+            dock_facility = self.db.execute(text("SELECT facility_id FROM docks WHERE dock_id=:id AND active=TRUE"), {"id": dock_id}).scalar_one_or_none()
+            if dock_facility is None:
+                raise ValueError("Selected dock is unavailable.")
+            if dock_facility != facility_id:
+                raise ValueError("Selected dock does not belong to the selected facility.")
+        return {"facility_name": facility, "customer_name": customer, "carrier_name": carrier}
+
+    def validate_products(
+        self,
+        products: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        if not products:
+            return []
+
+        product_ids = [item["product_id"] for item in products]
+        if len(product_ids) != len(set(product_ids)):
+            raise ValueError("Each product can only be added once per appointment.")
+
+        rows = self.db.execute(
+            text(
+                """
+                SELECT
+                    product_id, product_name, sku, unit_of_measure,
+                    unit_weight_lb, unit_volume_cuft,
+                    units_per_case, cases_per_pallet
+                FROM products
+                WHERE active = TRUE
+                  AND product_id = ANY(:product_ids);
+                """
+            ),
+            {"product_ids": product_ids},
+        ).mappings().all()
+
+        by_id = {row["product_id"]: dict(row) for row in rows}
+        missing = [product_id for product_id in product_ids if product_id not in by_id]
+        if missing:
+            raise ValueError(f"One or more selected products are unavailable: {', '.join(missing)}")
+
+        validated: list[dict[str, Any]] = []
+        for item in products:
+            product = by_id[item["product_id"]]
+            quantity = int(item["quantity"] or 0)
+            if quantity < 1:
+                raise ValueError("Product quantity must be at least 1.")
+
+            units_per_case = max(1, int(product["units_per_case"] or 1))
+            cases_per_pallet = max(1, int(product["cases_per_pallet"] or 1))
+            case_count = (quantity + units_per_case - 1) // units_per_case
+            pallet_count = (case_count + cases_per_pallet - 1) // cases_per_pallet
+
+            validated.append({
+                **product,
+                "quantity": quantity,
+                "case_count": case_count,
+                "pallet_count": pallet_count,
+                "line_weight_lb": round(float(product["unit_weight_lb"]) * quantity, 2),
+                "line_volume_cuft": round(float(product["unit_volume_cuft"]) * quantity, 4),
+            })
+
+        return validated
+
+    def create_appointment_products(
+        self,
+        *,
+        appt_id: str,
+        products: list[dict[str, Any]],
+    ) -> None:
+        for product in products:
+            self.db.execute(
+                text(
+                    """
+                    INSERT INTO appointment_products (
+                        appt_id, product_id, quantity, case_count,
+                        pallet_count, line_weight_lb, line_volume_cuft
+                    ) VALUES (
+                        :appt_id, :product_id, :quantity, :case_count,
+                        :pallet_count, :line_weight_lb, :line_volume_cuft
+                    );
+                    """
+                ),
+                {"appt_id": appt_id, **product},
+            )
+        self.db.commit()
+
+    def create_initial_event(self, appt_id: str, event_time: datetime) -> None:
+        self.create_audit_event(
+            appt_id=appt_id,
+            event_type="APPOINTMENT_CREATED",
+            event_time=event_time,
+            notes="Appointment created in Control Tower portal",
+            performed_by="Operations Planner",
+            details={"source": "control_tower"},
+        )
+
+    def create_audit_event(
+        self,
+        *,
+        appt_id: str,
+        event_type: str,
+        event_time: datetime,
+        notes: str | None = None,
+        performed_by: str | None = None,
+        field_name: str | None = None,
+        old_value: Any | None = None,
+        new_value: Any | None = None,
+        details: dict[str, Any] | None = None,
+    ) -> None:
+        import json
+
+        def serialize(value: Any | None) -> str | None:
+            if value is None:
+                return None
+            if isinstance(value, datetime):
+                return value.isoformat()
+            return str(value)
+
+        self.db.execute(
+            text(
+                """
+                INSERT INTO appointment_events (
+                    appt_id,
+                    event_type,
+                    event_time,
+                    notes,
+                    performed_by,
+                    field_name,
+                    old_value,
+                    new_value,
+                    details_json
+                ) VALUES (
+                    :appt_id,
+                    :event_type,
+                    :event_time,
+                    :notes,
+                    :performed_by,
+                    :field_name,
+                    :old_value,
+                    :new_value,
+                    CAST(:details_json AS JSONB)
+                );
+                """
+            ),
+            {
+                "appt_id": appt_id,
+                "event_type": event_type,
+                "event_time": event_time,
+                "notes": notes,
+                "performed_by": performed_by,
+                "field_name": field_name,
+                "old_value": serialize(old_value),
+                "new_value": serialize(new_value),
+                "details_json": json.dumps(details or {}),
+            },
+        )
+        self.db.commit()
+
+    def get_scoring_row(self, appt_id: str) -> dict[str, Any] | None:
+        row = self.db.execute(text("""
+            SELECT a.appt_id, a.scheduled_time, a.estimated_arrival_time, a.facility_id,
+                   a.carrier_id, a.customer_id, a.assigned_dock_id, a.appointment_type,
+                   a.load_type, a.pallet_count, a.sku_count, a.total_weight, a.total_cube,
+                   a.priority, a.sla_minutes, a.detention_cost_per_hour, a.distance_band,
+                   a.traffic_severity, a.weather_severity, a.surge_indicator
+            FROM appointments a WHERE a.appt_id=:appt_id;
+        """), {"appt_id": appt_id}).mappings().one_or_none()
+        return dict(row) if row else None
+
+    def save_prediction(self, prediction: dict[str, Any]) -> None:
+        self.db.execute(text("""
+            INSERT INTO appointment_predictions (
+                appt_id, predicted_arrival_time, predicted_delay_minutes,
+                predicted_duration_minutes, sla_miss_probability,
+                sla_recovery_probability, turn_risk_score, predicted_missed,
+                model_version, generated_at
+            ) VALUES (
+                :appt_id, :predicted_arrival_time, :predicted_delay_minutes,
+                :predicted_duration_minutes, :sla_miss_probability,
+                :sla_recovery_probability, :turn_risk_score, :predicted_missed,
+                :model_version, NOW()
+            );
+        """), prediction)
+        self.db.commit()
+
+    def create_initial_recommendation(
+        self,
+        *,
+        appt_id: str,
+        dock_id: str | None,
+        predicted_duration_minutes: int,
+        sla_minutes: int,
+        detention_cost_per_hour: float,
+    ) -> int:
+        minutes_over = max(0, predicted_duration_minutes - sla_minutes)
+        estimated_loss = round((minutes_over / 60) * detention_cost_per_hour, 2)
+        action_cost = 75.0
+        estimated_savings = max(0.0, round(estimated_loss - action_cost, 2))
+        recommendation_id = self.db.execute(text("""
+            INSERT INTO appointment_recommendations (
+                appt_id, recommendation_type, recommended_action,
+                recommended_dock_id, recommended_sequence, additional_labor,
+                estimated_loss_without_action, estimated_cost_of_action,
+                estimated_savings, status, created_at
+            ) VALUES (
+                :appt_id, 'SLA Recovery',
+                'Add one loader, pre-stage products and protect the assigned dock window',
+                :dock_id, 1, 1, :estimated_loss, :action_cost,
+                :estimated_savings, 'Pending', NOW()
+            ) RETURNING recommendation_id;
+        """), {
+            "appt_id": appt_id,
+            "dock_id": dock_id,
+            "estimated_loss": estimated_loss,
+            "action_cost": action_cost,
+            "estimated_savings": estimated_savings,
+        }).scalar_one()
+        actions = [
+            {
+                "sequence_number": 1,
+                "action_code": "ADD_LOADER",
+                "action_title": "Assign one additional loader",
+                "action_description": "Add temporary labor capacity to reduce handling time.",
+                "owner_role": "Warehouse Supervisor",
+                "estimated_minutes_saved": min(20, max(8, minutes_over // 3 or 8)),
+                "additional_loaders": 1,
+                "additional_forklifts": 0,
+                "required_dock_id": None,
+                "estimated_action_cost": 40.0,
+            },
+            {
+                "sequence_number": 2,
+                "action_code": "PRE_STAGE_PRODUCTS",
+                "action_title": "Pre-stage appointment products",
+                "action_description": "Stage high-volume products before the trailer reaches the dock.",
+                "owner_role": "Inventory Coordinator",
+                "estimated_minutes_saved": min(18, max(6, minutes_over // 4 or 6)),
+                "additional_loaders": 0,
+                "additional_forklifts": 0,
+                "required_dock_id": None,
+                "estimated_action_cost": 20.0,
+            },
+            {
+                "sequence_number": 3,
+                "action_code": "RESERVE_DOCK",
+                "action_title": "Reserve the assigned dock",
+                "action_description": "Protect the dock window from conflicting appointment moves.",
+                "owner_role": "Dock Coordinator",
+                "estimated_minutes_saved": min(15, max(5, minutes_over // 5 or 5)),
+                "additional_loaders": 0,
+                "additional_forklifts": 0,
+                "required_dock_id": dock_id,
+                "estimated_action_cost": 15.0,
+            },
+        ]
+        for action in actions:
+            self.db.execute(text("""
+                INSERT INTO recommendation_actions (
+                    recommendation_id, sequence_number, action_code,
+                    action_title, action_description, owner_role,
+                    estimated_minutes_saved, additional_loaders,
+                    additional_forklifts, required_dock_id,
+                    estimated_action_cost, status, created_at
+                ) VALUES (
+                    :recommendation_id, :sequence_number, :action_code,
+                    :action_title, :action_description, :owner_role,
+                    :estimated_minutes_saved, :additional_loaders,
+                    :additional_forklifts, :required_dock_id,
+                    :estimated_action_cost, 'Proposed', NOW()
+                );
+            """), {"recommendation_id": recommendation_id, **action})
+        self.db.commit()
+        return int(recommendation_id)
 
     def get_all(
         self,
@@ -938,6 +1459,79 @@ class AppointmentRepository:
             Appointment,
             appt_id,
         )
+
+
+    def update_appointment(
+        self,
+        *,
+        appt_id: str,
+        values: dict[str, Any],
+    ) -> Appointment:
+        appointment = self.get_by_id(appt_id)
+        if appointment is None:
+            raise ValueError("Appointment not found.")
+        for key, value in values.items():
+            setattr(appointment, key, value)
+        self.db.commit()
+        self.db.refresh(appointment)
+        return appointment
+
+    def replace_appointment_products(
+        self,
+        *,
+        appt_id: str,
+        products: list[dict[str, Any]],
+    ) -> None:
+        self.db.execute(
+            text("DELETE FROM appointment_products WHERE appt_id = :appt_id"),
+            {"appt_id": appt_id},
+        )
+        for product in products:
+            self.db.execute(
+                text(
+                    """
+                    INSERT INTO appointment_products (
+                        appt_id, product_id, quantity, case_count,
+                        pallet_count, line_weight_lb, line_volume_cuft
+                    ) VALUES (
+                        :appt_id, :product_id, :quantity, :case_count,
+                        :pallet_count, :line_weight_lb, :line_volume_cuft
+                    )
+                    """
+                ),
+                {"appt_id": appt_id, **product},
+            )
+        self.db.commit()
+
+    def create_update_event(
+        self,
+        *,
+        appt_id: str,
+        event_time: datetime,
+        notes: str,
+        performed_by: str = "Operations Planner",
+    ) -> None:
+        self.create_audit_event(
+            appt_id=appt_id,
+            event_type="APPOINTMENT_UPDATED",
+            event_time=event_time,
+            notes=notes,
+            performed_by=performed_by,
+        )
+
+    def supersede_pending_recommendations(self, appt_id: str) -> None:
+        self.db.execute(
+            text(
+                """
+                UPDATE appointment_recommendations
+                SET status = 'Superseded'
+                WHERE appt_id = :appt_id
+                  AND status = 'Pending'
+                """
+            ),
+            {"appt_id": appt_id},
+        )
+        self.db.commit()
 
     def create(
         self,

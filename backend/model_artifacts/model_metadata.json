@@ -1,0 +1,95 @@
+{
+  "model_version": "warehouse-ml-v1-202608040132",
+  "trained_at": "2026-08-04T01:32:09.854753+00:00",
+  "data_scope": "synthetic warehouse appointments; pre-arrival features",
+  "algorithm": {
+    "turn_time": "HistGradientBoostingRegressor",
+    "sla_miss": "HistGradientBoostingClassifier"
+  },
+  "rows": {
+    "total": 500000,
+    "train": 350000,
+    "validation": 75000,
+    "test": 75000
+  },
+  "targets": {
+    "turn_time": "actual_turn_time_minutes",
+    "sla_miss": "actual_sla_missed"
+  },
+  "features": [
+    "facility_id",
+    "carrier_id",
+    "customer_id",
+    "assigned_dock_id",
+    "appointment_type",
+    "load_type",
+    "distance_band",
+    "pallet_count",
+    "sku_count",
+    "total_weight",
+    "total_cube",
+    "priority",
+    "sla_minutes",
+    "detention_cost_per_hour",
+    "estimated_delay_minutes",
+    "traffic_severity",
+    "weather_severity",
+    "surge_indicator",
+    "scheduled_hour",
+    "scheduled_day_of_week",
+    "scheduled_month",
+    "is_weekend"
+  ],
+  "metrics": {
+    "turn_time": {
+      "mae": 19.592,
+      "rmse": 23.923,
+      "r2": 0.553,
+      "within_15_minutes_percent": 43.8
+    },
+    "sla_miss": {
+      "roc_auc": 0.9215,
+      "pr_auc": 0.9697,
+      "confusion_matrix": [
+        [
+          14158,
+          6351
+        ],
+        [
+          4587,
+          49904
+        ]
+      ],
+      "classification_report": {
+        "0": {
+          "precision": 0.7552947452654041,
+          "recall": 0.6903310741625628,
+          "f1-score": 0.7213532378865848,
+          "support": 20509.0
+        },
+        "1": {
+          "precision": 0.8871033685894587,
+          "recall": 0.9158209612596575,
+          "f1-score": 0.9012334531269752,
+          "support": 54491.0
+        },
+        "accuracy": 0.85416,
+        "macro avg": {
+          "precision": 0.8211990569274314,
+          "recall": 0.8030760177111101,
+          "f1-score": 0.81129334550678,
+          "support": 75000.0
+        },
+        "weighted avg": {
+          "precision": 0.8510598611794182,
+          "recall": 0.85416,
+          "f1-score": 0.8520446086687731,
+          "support": 75000.0
+        }
+      }
+    }
+  },
+  "class_balance": {
+    "sla_miss_rate_percent": 72.6
+  }
+}

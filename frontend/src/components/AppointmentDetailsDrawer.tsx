@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { EditAppointmentDrawer } from "./EditAppointmentDrawer";
 import { useWhatIf } from "../hooks/useWhatIf";
 import {
     updateRecommendationDecisions,
@@ -76,6 +77,9 @@ function formatEventType(
     const labels: Record<string, string> = {
         APPOINTMENT_CREATED:
             "Appointment created",
+
+        APPOINTMENT_UPDATED:
+            "Appointment updated",
 
         SCHEDULED:
             "Appointment scheduled",
@@ -205,6 +209,8 @@ export function AppointmentDetailsDrawer({
     onRefresh,
     onClose,
 }: AppointmentDetailsDrawerProps) {
+    const [editOpen, setEditOpen] = useState(false);
+
     const [
         selectedActionIds,
         setSelectedActionIds,
@@ -503,6 +509,16 @@ export function AppointmentDetailsDrawer({
     const recovery =
         details?.recovery_summary;
 
+    const acceptedActions =
+        details?.recommendation_actions.filter(
+            (action) =>
+                action.decision_status === "Accepted",
+        ) ?? [];
+
+    const isCompleted =
+        recovery?.is_completed ??
+        appointment?.status === "Completed";
+
     const score =
         prediction?.turn_risk_score ??
         selectedAppointment.turn_risk_score ??
@@ -547,7 +563,13 @@ export function AppointmentDetailsDrawer({
                         </p>
                     </div>
 
-                    <button
+                    <div className="drawer-header-actions">
+                        {details && appointment?.status !== "Completed" && (
+                            <button type="button" className="secondary-button drawer-edit-button" onClick={() => setEditOpen(true)}>
+                                Edit appointment
+                            </button>
+                        )}
+                        <button
                         type="button"
                         className="drawer-close"
                         onClick={onClose}
@@ -555,6 +577,7 @@ export function AppointmentDetailsDrawer({
                     >
                         ×
                     </button>
+                    </div>
                 </div>
 
                 <div className="drawer-content">
@@ -664,6 +687,156 @@ export function AppointmentDetailsDrawer({
                             </section>
 
 
+                            {isCompleted && (
+                                <section className="drawer-section completed-outcome-section">
+                                    <div className="drawer-section-heading">
+                                        <div>
+                                            <span className="drawer-section-label">
+                                                Completed outcome
+                                            </span>
+
+                                            <h3>
+                                                {recovery?.completed_outcome ??
+                                                    "Completed appointment"}
+                                            </h3>
+                                        </div>
+
+                                        <span
+                                            className={`completed-outcome-badge ${
+                                                recovery?.actual_sla_missed
+                                                    ? "missed"
+                                                    : "recovered"
+                                            }`}
+                                        >
+                                            {recovery?.actual_sla_missed
+                                                ? "SLA missed"
+                                                : "SLA met"}
+                                        </span>
+                                    </div>
+
+                                    <div className="completed-outcome-metrics">
+                                        <div>
+                                            <span>Actual turn</span>
+                                            <strong>
+                                                {recovery
+                                                    ?.actual_turn_time_minutes ??
+                                                    appointment
+                                                        ?.actual_turn_time_minutes ??
+                                                    "—"}
+                                                <small> min</small>
+                                            </strong>
+                                        </div>
+
+                                        <div>
+                                            <span>Target SLA</span>
+                                            <strong>
+                                                {recovery?.sla_minutes ??
+                                                    appointment?.sla_minutes ??
+                                                    "—"}
+                                                <small> min</small>
+                                            </strong>
+                                        </div>
+
+                                        <div>
+                                            <span>SLA variance</span>
+                                            <strong
+                                                className={
+                                                    (recovery
+                                                        ?.sla_variance_minutes ??
+                                                        0) > 0
+                                                        ? "negative-impact"
+                                                        : "positive-impact"
+                                                }
+                                            >
+                                                {recovery
+                                                    ?.sla_variance_minutes ==
+                                                null
+                                                    ? "—"
+                                                    : `${
+                                                        recovery
+                                                            .sla_variance_minutes >
+                                                        0
+                                                            ? "+"
+                                                            : ""
+                                                    }${recovery.sla_variance_minutes}`}
+                                                {recovery
+                                                    ?.sla_variance_minutes !=
+                                                    null && (
+                                                    <small> min</small>
+                                                )}
+                                            </strong>
+                                        </div>
+
+                                        <div>
+                                            <span>Accepted actions</span>
+                                            <strong>
+                                                {acceptedActions.length}
+                                            </strong>
+                                        </div>
+                                    </div>
+
+                                    <div className="accepted-outcome-actions">
+                                        <div className="accepted-outcome-actions-heading">
+                                            <strong>
+                                                Accepted recovery recommendations
+                                            </strong>
+
+                                            <span>
+                                                {recovery?.recommendation_used
+                                                    ? recovery.actual_sla_met
+                                                        ? "Contributed to a recovered SLA"
+                                                        : "Applied, but SLA was still missed"
+                                                    : "No recovery recommendation was accepted"}
+                                            </span>
+                                        </div>
+
+                                        {acceptedActions.length > 0 ? (
+                                            <div className="accepted-outcome-action-list">
+                                                {acceptedActions.map(
+                                                    (action) => (
+                                                        <article
+                                                            key={
+                                                                action
+                                                                    .recommendation_action_id
+                                                            }
+                                                            className="accepted-outcome-action"
+                                                        >
+                                                            <div>
+                                                                <strong>
+                                                                    {action.action_title}
+                                                                </strong>
+
+                                                                <span>
+                                                                    {action.action_description}
+                                                                </span>
+                                                            </div>
+
+                                                            <div className="accepted-outcome-action-meta">
+                                                                <strong>
+                                                                    {action.estimated_minutes_saved}
+                                                                    {" "}
+                                                                    min
+                                                                </strong>
+
+                                                                <span>
+                                                                    {action.decision_by ??
+                                                                        "Warehouse Supervisor"}
+                                                                </span>
+                                                            </div>
+                                                        </article>
+                                                    ),
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <p className="accepted-outcome-empty">
+                                                This completed appointment has no
+                                                accepted recovery actions.
+                                            </p>
+                                        )}
+                                    </div>
+                                </section>
+                            )}
+
                             <section className="drawer-section risk-assessment-section">
                                 <span className="drawer-section-label">
                                     AI risk assessment
@@ -693,7 +866,11 @@ export function AppointmentDetailsDrawer({
                                     </div>
 
                                     <div>
-                                        <span>Predicted turn</span>
+                                        <span>
+                                            {isCompleted
+                                                ? "Original predicted turn"
+                                                : "Predicted turn"}
+                                        </span>
 
                                         <strong>
                                             {recovery
@@ -718,7 +895,9 @@ export function AppointmentDetailsDrawer({
                                 <div className="comparison-grid">
                                     <div className="comparison-card">
                                         <span>
-                                            Without recovery plan
+                                            {isCompleted
+                                                ? "Original forecast without recovery"
+                                                : "Without recovery plan"}
                                         </span>
 
                                         <strong>
@@ -1731,21 +1910,22 @@ export function AppointmentDetailsDrawer({
                                 appointmentId={
                                     selectedAppointment.appt_id
                                 }
+                                recommendationId={
+                                    details.recommendation
+                                        ?.recommendation_id ?? null
+                                }
+                                recommendationActions={
+                                    details.recommendation_actions
+                                }
                                 selectedActionIds={
-                                    Array.from(selectedActionIds).sort(
-                                        (left, right) =>
-                                            left - right,
-                                    )
+                                    Array.from(selectedActionIds)
                                 }
-                                extraLoaders={
-                                    extraLoaders
-                                }
-                                extraForklifts={
-                                    extraForklifts
-                                }
+                                extraLoaders={extraLoaders}
+                                extraForklifts={extraForklifts}
                                 preStageProducts={
                                     preStageProducts
                                 }
+                                onRefresh={onRefresh}
                             />
 
                             <section className="drawer-section recovery-value-section">
@@ -1925,6 +2105,32 @@ export function AppointmentDetailsDrawer({
                                                     {event.notes && (
                                                         <p>{event.notes}</p>
                                                     )}
+
+                                                    {event.performed_by && (
+                                                        <span className="timeline-actor">
+                                                            By {event.performed_by}
+                                                        </span>
+                                                    )}
+
+                                                    {(event.old_value !== null ||
+                                                        event.new_value !== null) && (
+                                                        <div className="timeline-change">
+                                                            {event.field_name && (
+                                                                <span className="timeline-field">
+                                                                    {event.field_name.replaceAll("_", " ")}
+                                                                </span>
+                                                            )}
+                                                            <div>
+                                                                <span className="timeline-old-value">
+                                                                    {event.old_value ?? "Not set"}
+                                                                </span>
+                                                                <span aria-hidden="true">→</span>
+                                                                <strong>
+                                                                    {event.new_value ?? "Removed"}
+                                                                </strong>
+                                                            </div>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                         );
@@ -2000,6 +2206,14 @@ export function AppointmentDetailsDrawer({
                     )}
                 </div>
             </aside>
+            {editOpen && details && (
+                <EditAppointmentDrawer
+                    open={editOpen}
+                    details={details}
+                    onClose={() => setEditOpen(false)}
+                    onUpdated={onRefresh}
+                />
+            )}
         </>
     );
 }

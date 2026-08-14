@@ -15,38 +15,23 @@ DATABASE_URL = (
 )
 
 DEFAULT_SEED = 42
-PRODUCT_COUNT = 250
+PRODUCT_COUNT = 500
 CUSTOMER_COUNT = 100
 CARRIER_COUNT = 20
 DOCKS_PER_FACILITY = 10
 EQUIPMENT_PER_FACILITY = 20
 
 FACILITIES = [
-    (
-        "FAC001",
-        "Atlanta Distribution Center",
-        "America/New_York",
-    ),
-    (
-        "FAC002",
-        "Dallas Distribution Center",
-        "America/Chicago",
-    ),
-    (
-        "FAC003",
-        "Chicago Distribution Center",
-        "America/Chicago",
-    ),
-    (
-        "FAC004",
-        "New Jersey Distribution Center",
-        "America/New_York",
-    ),
-    (
-        "FAC005",
-        "Los Angeles Distribution Center",
-        "America/Los_Angeles",
-    ),
+    ("FAC001", "Atlanta Distribution Center", "America/New_York"),
+    ("FAC002", "Dallas Distribution Center", "America/Chicago"),
+    ("FAC003", "Chicago Distribution Center", "America/Chicago"),
+    ("FAC004", "New Jersey Distribution Center", "America/New_York"),
+    ("FAC005", "Los Angeles Distribution Center", "America/Los_Angeles"),
+    ("FAC006", "Miami Distribution Center", "America/New_York"),
+    ("FAC007", "Seattle Distribution Center", "America/Los_Angeles"),
+    ("FAC008", "Phoenix Distribution Center", "America/Phoenix"),
+    ("FAC009", "Denver Distribution Center", "America/Denver"),
+    ("FAC010", "Houston Distribution Center", "America/Chicago"),
 ]
 
 CARRIER_NAMES = [
@@ -781,13 +766,51 @@ def appointment_time(
             )
         )
 
-    return now + timedelta(
-        days=rng.randint(-2, 5),
+    # Demo appointments are distributed across the next calendar month.
+    if now.month == 12:
+        next_month_start = datetime(
+            now.year + 1,
+            1,
+            1,
+        )
+        following_month_start = datetime(
+            now.year + 1,
+            2,
+            1,
+        )
+    else:
+        next_month_start = datetime(
+            now.year,
+            now.month + 1,
+            1,
+        )
+        if now.month == 11:
+            following_month_start = datetime(
+                now.year + 1,
+                1,
+                1,
+            )
+        else:
+            following_month_start = datetime(
+                now.year,
+                now.month + 2,
+                1,
+            )
+
+    total_minutes = int(
+        (
+            following_month_start
+            - next_month_start
+        ).total_seconds()
+        // 60
+    )
+
+    return next_month_start + timedelta(
         minutes=rng.randrange(
             0,
-            24 * 60,
+            total_minutes,
             15,
-        ),
+        )
     )
 
 
@@ -1067,26 +1090,8 @@ def generate_appointments(
         if mode == "historical":
             status = "Completed"
         else:
-            hours_from_now = (
-                scheduled_time - now
-            ).total_seconds() / 3600
-
-            if hours_from_now > 3:
-                status = "Scheduled"
-            elif hours_from_now > 0:
-                status = rng.choice(
-                    ["En Route", "Arrived"]
-                )
-            elif hours_from_now > -3:
-                status = rng.choice(
-                    [
-                        "Waiting",
-                        "Dock Assigned",
-                        "In Progress",
-                    ]
-                )
-            else:
-                status = "Completed"
+            # All demo records represent future appointments.
+            status = "Scheduled"
 
         if mode == "demo" and status != "Completed":
             stored_actual_arrival = (

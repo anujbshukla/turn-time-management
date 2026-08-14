@@ -17,6 +17,26 @@ export type CopilotMessageRole =
     | "user"
     | "assistant";
 
+export type CopilotActionType =
+    | "answer"
+    | "accept_actions"
+    | "reject_actions"
+    | "run_what_if"
+    | "filter_appointments"
+    | "open_appointment";
+
+export interface CopilotActionIntent {
+    action: CopilotActionType;
+
+    action_ids: number[];
+
+    confirmation_required: boolean;
+
+    response_message: string;
+
+    metadata: Record<string, string>;
+}
+
 export interface CopilotConversationMessage {
     role: CopilotMessageRole;
     content: string;
@@ -28,7 +48,14 @@ export interface CopilotFact {
 
 export interface AppointmentCopilotResponse {
     appt_id: string;
+
+    mode: "answer" | "action";
+
     answer: string;
+
     facts: CopilotFact[];
+
     suggested_questions: string[];
+
+    action_intent: CopilotActionIntent | null;
 }

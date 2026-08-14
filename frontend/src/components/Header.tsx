@@ -1,23 +1,24 @@
-export function Header() {
+import type { ReactNode } from "react";
+
+interface HeaderProps {
+  children?: ReactNode;
+  notification?: ReactNode;
+}
+
+export function Header({ children, notification }: HeaderProps) {
   return (
-    <header className="top-header">
-      <div>
-        <p className="eyebrow">
-          Warehouse Operations Control Tower
-        </p>
+    <header className="top-header compact-operations-header">
+      {children && (
+        <div className="top-header-controls">
+          {children}
+        </div>
+      )}
 
-        <h1>Turn Time Management</h1>
-
-        <p className="header-description">
-          Monitor appointments, SLA risk and dock
-          performance.
-        </p>
-      </div>
-
-      <div className="live-status">
-        <span className="live-dot" />
-        Live Operations
-      </div>
+      {notification && (
+        <div className="top-header-notification-row">
+          {notification}
+        </div>
+      )}
     </header>
   );
 }

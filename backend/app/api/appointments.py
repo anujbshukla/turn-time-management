@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
@@ -10,7 +11,11 @@ from app.repositories.appointment_repository import (
 )
 from app.schemas import (
     AppointmentCreate,
+    AppointmentCreatedResponse,
+    AppointmentReferenceData,
     AppointmentResponse,
+    AppointmentUpdate,
+    AppointmentUpdatedResponse,
     WhatIfRequest,
     WhatIfResponse,
 )
@@ -59,6 +64,14 @@ def get_paginated_appointments(
     facility_id: str | None = Query(
         default=None,
     ),
+    customer_id: str | None = Query(default=None),
+    carrier_id: str | None = Query(default=None),
+    appointment_type: str | None = Query(
+        default=None,
+        pattern="^(Inbound|Outbound)$",
+    ),
+    date_from: date | None = Query(default=None),
+    date_to: date | None = Query(default=None),
     status: str | None = Query(
         default=None,
     ),
@@ -70,6 +83,13 @@ def get_paginated_appointments(
     ),
     search: str | None = Query(
         default=None,
+    ),
+    sort_by: str | None = Query(
+        default=None,
+    ),
+    sort_direction: str | None = Query(
+        default=None,
+        pattern="^(asc|desc)$",
     ),
     service: AppointmentService = Depends(
         get_appointment_service
@@ -90,10 +110,49 @@ def get_paginated_appointments(
         page=page,
         page_size=page_size,
         facility_id=facility_id,
+        customer_id=customer_id,
+        carrier_id=carrier_id,
+        appointment_type=appointment_type,
+        date_from=date_from,
+        date_to=date_to,
         status=status,
         risk_level=risk_level,
         outcome=outcome,
         search=search,
+        sort_by=sort_by,
+        sort_direction=sort_direction,
+    )
+
+
+@router.get(
+    "/reference-data/options",
+    response_model=AppointmentReferenceData,
+)
+def get_appointment_reference_data(
+    service: AppointmentService = Depends(get_appointment_service),
+) -> dict[str, Any]:
+    return service.get_reference_data()
+
+@router.get("/reference-data/filter-options")
+def get_appointment_filter_options(
+    facility_id: str | None = Query(default=None),
+    customer_id: str | None = Query(default=None),
+    carrier_id: str | None = Query(default=None),
+    appointment_type: str | None = Query(
+        default=None,
+        pattern="^(Inbound|Outbound)$",
+    ),
+    date_from: date | None = Query(default=None),
+    date_to: date | None = Query(default=None),
+    service: AppointmentService = Depends(get_appointment_service),
+) -> dict[str, Any]:
+    return service.get_filter_reference_data(
+        facility_id=facility_id,
+        customer_id=customer_id,
+        carrier_id=carrier_id,
+        appointment_type=appointment_type,
+        date_from=date_from,
+        date_to=date_to,
     )
 
 
@@ -137,9 +196,21 @@ def get_appointment(
     return service.get_by_id(appt_id)
 
 
+@router.patch(
+    "/{appt_id}",
+    response_model=AppointmentUpdatedResponse,
+)
+def update_appointment(
+    appt_id: str,
+    payload: AppointmentUpdate,
+    service: AppointmentService = Depends(get_appointment_service),
+) -> dict[str, Any]:
+    return service.update(appt_id, payload)
+
+
 @router.post(
     "",
-    response_model=AppointmentResponse,
+    response_model=AppointmentCreatedResponse,
     status_code=201,
 )
 def create_appointment(
@@ -147,5 +218,5 @@ def create_appointment(
     service: AppointmentService = Depends(
         get_appointment_service
     ),
-) -> Appointment:
+) -> dict[str, Any]:
     return service.create(payload)

@@ -456,10 +456,60 @@ class OptimizationWindowRequest(BaseModel):
     customer_id: str | None = Field(default=None, max_length=100)
     carrier_id: str | None = Field(default=None, max_length=100)
     appointment_type: Literal["Inbound", "Outbound"] | None = None
-    date_from: date | None = None
-    date_to: date | None = None
+    date_from: date | datetime | None = None
+    date_to: date | datetime | None = None
     max_missions: int = Field(default=5, ge=1, le=10)
+
+    # Optional mission-level What-If constraints. When omitted the optimizer
+    # uses all actual resource headroom calculated from shifts/equipment.
+    max_extra_loaders_per_hour: int | None = Field(
+        default=None,
+        ge=0,
+        le=20,
+    )
+    max_extra_forklifts_per_hour: int | None = Field(
+        default=None,
+        ge=0,
+        le=20,
+    )
+    max_staging_labor_per_hour: int | None = Field(
+        default=None,
+        ge=0,
+        le=20,
+    )
+    allow_dock_reassignment: bool = True
 
 
 class OptimizationMissionStatusRequest(BaseModel):
-    status: Literal["Proposed", "Accepted", "Completed", "Dismissed"]
+    status: Literal[
+        "Proposed",
+        "Accepted",
+        "In Progress",
+        "Completed",
+        "Dismissed",
+    ]
+
+
+class OptimizationMissionAcceptRequest(BaseModel):
+    facility_id: str = Field(max_length=100)
+    customer_id: str | None = Field(default=None, max_length=100)
+    carrier_id: str | None = Field(default=None, max_length=100)
+    appointment_type: Literal["Inbound", "Outbound"] | None = None
+    window_start: datetime
+    window_end: datetime
+    max_extra_loaders_per_hour: int | None = Field(
+        default=None,
+        ge=0,
+        le=20,
+    )
+    max_extra_forklifts_per_hour: int | None = Field(
+        default=None,
+        ge=0,
+        le=20,
+    )
+    max_staging_labor_per_hour: int | None = Field(
+        default=None,
+        ge=0,
+        le=20,
+    )
+    allow_dock_reassignment: bool = True

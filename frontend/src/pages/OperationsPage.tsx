@@ -29,6 +29,7 @@ import { KpiCard } from "../components/KpiCard";
 import { LiveWhatIfDashboard } from "../components/LiveWhatIfDashboard";
 import { OperationalAlertsPanel } from "../components/OperationalAlertsPanel";
 import { PredictionCenter } from "../components/PredictionCenter/PredictionCenter";
+import { MLModelHealth } from "../components/MLModelHealth";
 import { RecommendationSavings } from "../components/RecommendationSavings";
 import { SectionHeading } from "../components/SectionHeading";
 
@@ -936,6 +937,18 @@ export function OperationsPage({
                       : "Prediction intelligence is currently unavailable."}
                   </div>
                 )}
+              </CollapsibleDashboardSection>
+
+              <CollapsibleDashboardSection
+                eyebrow="ML governance"
+                title="ML Model Health & Retraining"
+                description="Monitor production accuracy, data drift, optimizer effectiveness and retraining signals."
+                status="Production monitoring"
+                summary="Accuracy · drift · retraining governance"
+              >
+                <MLModelHealth
+                  facilityId={facilityId}
+                />
               </CollapsibleDashboardSection>
 
               <CollapsibleDashboardSection

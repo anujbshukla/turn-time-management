@@ -12,6 +12,7 @@ import {
     XAxis,
     YAxis,
 } from "recharts";
+import type { XAxisTickContentProps } from "recharts";
 
 import type { LateAppointmentOutcome, RiskDistributionItem } from "../types/dashboard";
 
@@ -96,15 +97,12 @@ function renderRiskLabel({
 }
 
 
-function renderOutcomeTick({
-    x = 0,
-    y = 0,
-    payload,
-}: {
-    x?: number;
-    y?: number;
-    payload?: { value?: string };
-}) {
+function renderOutcomeTick(props: XAxisTickContentProps) {
+    const x = Number(props.x ?? 0);
+    const y = Number(props.y ?? 0);
+    const payload = props.payload as
+        | { value?: unknown }
+        | undefined;
     const value = String(payload?.value ?? "");
     const lines =
         value === "Recovered with recommendations"

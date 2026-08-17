@@ -8,6 +8,7 @@ from sqlalchemy.engine import Engine
 from app.ml.model_service import WarehouseModelService
 from app.ml.scoring import score_current_appointments
 from app.ml.training import train_models
+from app.services.ml_monitoring_service import MLMonitoringService
 
 
 class MLService:
@@ -19,7 +20,25 @@ class MLService:
         return WarehouseModelService(self.artifact_dir).status()
 
     def train(self) -> dict[str, Any]:
-        return train_models(self.engine, self.artifact_dir)
+        metadata = train_models(
+            self.engine,
+            self.artifact_dir,
+        )
+        # The existing training workflow writes the live production artifacts.
+        # Record that promotion explicitly so every run remains auditable.
+        try:
+            MLMonitoringService(
+                self.engine,
+                self.artifact_dir,
+            ).register_current_model(
+                metadata,
+                status="Production",
+            )
+        except Exception:
+            # Registry failure must not corrupt a successful model training run.
+            # Monitoring endpoints will lazily bootstrap the production entry.
+            pass
+        return metadata
 
     def score(self) -> dict[str, Any]:
         return score_current_appointments(self.engine, self.artifact_dir)

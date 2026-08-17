@@ -262,8 +262,6 @@ export function AppointmentDetailsDrawer({
         simulation: whatIfSimulation,
         loading: whatIfLoading,
         error: whatIfError,
-        refresh: refreshWhatIf,
-        clear: clearWhatIf,
     } = useWhatIf({
         appointmentId:
             selectedAppointment?.appt_id,

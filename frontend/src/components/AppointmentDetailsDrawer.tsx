@@ -1,12 +1,10 @@
 import { useEffect, useState } from "react";
-import { EditAppointmentDrawer } from "./EditAppointmentDrawer";
 import { useWhatIf } from "../hooks/useWhatIf";
+import { AppointmentCopilot } from "./AppointmentCopilot";
 import {
     updateRecommendationDecisions,
 } from "../services/recommendations";
-import {
-    AppointmentCopilot,
-} from "./AppointmentCopilot";
+
 import type {
     ActionDecisionStatus,
 } from "../services/recommendations";
@@ -48,6 +46,11 @@ function formatDate(
 }
 
 
+function formatTime(value: string | null | undefined) {
+    if (!value) return "—";
+    return new Date(value).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
 function formatPercent(
     value: number | null | undefined,
 ) {
@@ -77,9 +80,6 @@ function formatEventType(
     const labels: Record<string, string> = {
         APPOINTMENT_CREATED:
             "Appointment created",
-
-        APPOINTMENT_UPDATED:
-            "Appointment updated",
 
         SCHEDULED:
             "Appointment scheduled",
@@ -209,8 +209,6 @@ export function AppointmentDetailsDrawer({
     onRefresh,
     onClose,
 }: AppointmentDetailsDrawerProps) {
-    const [editOpen, setEditOpen] = useState(false);
-
     const [
         selectedActionIds,
         setSelectedActionIds,
@@ -264,6 +262,8 @@ export function AppointmentDetailsDrawer({
         simulation: whatIfSimulation,
         loading: whatIfLoading,
         error: whatIfError,
+        refresh: refreshWhatIf,
+        clear: clearWhatIf,
     } = useWhatIf({
         appointmentId:
             selectedAppointment?.appt_id,
@@ -283,121 +283,7 @@ export function AppointmentDetailsDrawer({
                 details?.prediction,
             ),
     });
-    const selectedWhatIfActions =
-        details?.recommendation_actions.filter(
-            (action) =>
-                selectedActionIds.has(
-                    action.recommendation_action_id,
-                ),
-        ) ?? [];
 
-    const highestImpactAction =
-        selectedWhatIfActions.reduce<
-            RecommendationAction | null
-        >(
-            (highest, action) => {
-                if (
-                    highest === null ||
-                    action.estimated_minutes_saved >
-                    highest.estimated_minutes_saved
-                ) {
-                    return action;
-                }
-
-                return highest;
-            },
-            null,
-        );
-
-    const manualContributors = [
-        {
-            label: "Additional loaders",
-            minutesSaved: extraLoaders * 12,
-        },
-        {
-            label: "Additional forklifts",
-            minutesSaved: extraForklifts * 9,
-        },
-        {
-            label: "Pre-stage products",
-            minutesSaved:
-                preStageProducts ? 15 : 0,
-        },
-    ];
-
-    const topManualContributor =
-        manualContributors.reduce<{
-            label: string;
-            minutesSaved: number;
-        } | null>(
-            (highest, contributor) => {
-                if (
-                    contributor.minutesSaved <= 0
-                ) {
-                    return highest;
-                }
-
-                if (
-                    highest === null ||
-                    contributor.minutesSaved >
-                    highest.minutesSaved
-                ) {
-                    return contributor;
-                }
-
-                return highest;
-            },
-            null,
-        );
-
-    const topContributor =
-        highestImpactAction &&
-            (
-                !topManualContributor ||
-                highestImpactAction
-                    .estimated_minutes_saved >=
-                topManualContributor.minutesSaved
-            )
-            ? {
-                label:
-                    highestImpactAction.action_title,
-                minutesSaved:
-                    highestImpactAction
-                        .estimated_minutes_saved,
-            }
-            : topManualContributor;
-
-    const simulationConfidence =
-        whatIfSimulation
-            ? Math.min(
-                98,
-                Math.max(
-                    65,
-                    Math.round(
-                        72 +
-                        whatIfSimulation
-                            .selected_action_ids
-                            .length *
-                        3 +
-                        (preStageProducts ? 3 : 0) +
-                        Math.min(
-                            8,
-                            extraLoaders * 2 +
-                            extraForklifts * 2,
-                        ),
-                    ),
-                ),
-            )
-            : null;
-
-    const confidenceLabel =
-        simulationConfidence == null
-            ? "Unavailable"
-            : simulationConfidence >= 90
-                ? "High confidence"
-                : simulationConfidence >= 75
-                    ? "Moderate confidence"
-                    : "Directional estimate";
     function toggleActionSelection(
         actionId: number,
     ) {
@@ -509,16 +395,6 @@ export function AppointmentDetailsDrawer({
     const recovery =
         details?.recovery_summary;
 
-    const acceptedActions =
-        details?.recommendation_actions.filter(
-            (action) =>
-                action.decision_status === "Accepted",
-        ) ?? [];
-
-    const isCompleted =
-        recovery?.is_completed ??
-        appointment?.status === "Completed";
-
     const score =
         prediction?.turn_risk_score ??
         selectedAppointment.turn_risk_score ??
@@ -531,6 +407,8 @@ export function AppointmentDetailsDrawer({
     const allActionsSelected =
         actionCount > 0 &&
         selectedActionIds.size === actionCount;
+
+
 
 
     return (
@@ -563,13 +441,7 @@ export function AppointmentDetailsDrawer({
                         </p>
                     </div>
 
-                    <div className="drawer-header-actions">
-                        {details && appointment?.status !== "Completed" && (
-                            <button type="button" className="secondary-button drawer-edit-button" onClick={() => setEditOpen(true)}>
-                                Edit appointment
-                            </button>
-                        )}
-                        <button
+                    <button
                         type="button"
                         className="drawer-close"
                         onClick={onClose}
@@ -577,7 +449,6 @@ export function AppointmentDetailsDrawer({
                     >
                         ×
                     </button>
-                    </div>
                 </div>
 
                 <div className="drawer-content">
@@ -652,6 +523,9 @@ export function AppointmentDetailsDrawer({
                                         </strong>
                                     </div>
 
+                                    <div><span>Appointment time</span><strong>{formatTime(appointment?.scheduled_time)}</strong></div>
+                                    <div><span>Expected arrival</span><strong>{formatTime(appointment?.estimated_arrival_time)}</strong></div>
+
                                     <div>
                                         <span>Carrier</span>
                                         <strong>
@@ -687,156 +561,6 @@ export function AppointmentDetailsDrawer({
                             </section>
 
 
-                            {isCompleted && (
-                                <section className="drawer-section completed-outcome-section">
-                                    <div className="drawer-section-heading">
-                                        <div>
-                                            <span className="drawer-section-label">
-                                                Completed outcome
-                                            </span>
-
-                                            <h3>
-                                                {recovery?.completed_outcome ??
-                                                    "Completed appointment"}
-                                            </h3>
-                                        </div>
-
-                                        <span
-                                            className={`completed-outcome-badge ${
-                                                recovery?.actual_sla_missed
-                                                    ? "missed"
-                                                    : "recovered"
-                                            }`}
-                                        >
-                                            {recovery?.actual_sla_missed
-                                                ? "SLA missed"
-                                                : "SLA met"}
-                                        </span>
-                                    </div>
-
-                                    <div className="completed-outcome-metrics">
-                                        <div>
-                                            <span>Actual turn</span>
-                                            <strong>
-                                                {recovery
-                                                    ?.actual_turn_time_minutes ??
-                                                    appointment
-                                                        ?.actual_turn_time_minutes ??
-                                                    "—"}
-                                                <small> min</small>
-                                            </strong>
-                                        </div>
-
-                                        <div>
-                                            <span>Target SLA</span>
-                                            <strong>
-                                                {recovery?.sla_minutes ??
-                                                    appointment?.sla_minutes ??
-                                                    "—"}
-                                                <small> min</small>
-                                            </strong>
-                                        </div>
-
-                                        <div>
-                                            <span>SLA variance</span>
-                                            <strong
-                                                className={
-                                                    (recovery
-                                                        ?.sla_variance_minutes ??
-                                                        0) > 0
-                                                        ? "negative-impact"
-                                                        : "positive-impact"
-                                                }
-                                            >
-                                                {recovery
-                                                    ?.sla_variance_minutes ==
-                                                null
-                                                    ? "—"
-                                                    : `${
-                                                        recovery
-                                                            .sla_variance_minutes >
-                                                        0
-                                                            ? "+"
-                                                            : ""
-                                                    }${recovery.sla_variance_minutes}`}
-                                                {recovery
-                                                    ?.sla_variance_minutes !=
-                                                    null && (
-                                                    <small> min</small>
-                                                )}
-                                            </strong>
-                                        </div>
-
-                                        <div>
-                                            <span>Accepted actions</span>
-                                            <strong>
-                                                {acceptedActions.length}
-                                            </strong>
-                                        </div>
-                                    </div>
-
-                                    <div className="accepted-outcome-actions">
-                                        <div className="accepted-outcome-actions-heading">
-                                            <strong>
-                                                Accepted recovery recommendations
-                                            </strong>
-
-                                            <span>
-                                                {recovery?.recommendation_used
-                                                    ? recovery.actual_sla_met
-                                                        ? "Contributed to a recovered SLA"
-                                                        : "Applied, but SLA was still missed"
-                                                    : "No recovery recommendation was accepted"}
-                                            </span>
-                                        </div>
-
-                                        {acceptedActions.length > 0 ? (
-                                            <div className="accepted-outcome-action-list">
-                                                {acceptedActions.map(
-                                                    (action) => (
-                                                        <article
-                                                            key={
-                                                                action
-                                                                    .recommendation_action_id
-                                                            }
-                                                            className="accepted-outcome-action"
-                                                        >
-                                                            <div>
-                                                                <strong>
-                                                                    {action.action_title}
-                                                                </strong>
-
-                                                                <span>
-                                                                    {action.action_description}
-                                                                </span>
-                                                            </div>
-
-                                                            <div className="accepted-outcome-action-meta">
-                                                                <strong>
-                                                                    {action.estimated_minutes_saved}
-                                                                    {" "}
-                                                                    min
-                                                                </strong>
-
-                                                                <span>
-                                                                    {action.decision_by ??
-                                                                        "Warehouse Supervisor"}
-                                                                </span>
-                                                            </div>
-                                                        </article>
-                                                    ),
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <p className="accepted-outcome-empty">
-                                                This completed appointment has no
-                                                accepted recovery actions.
-                                            </p>
-                                        )}
-                                    </div>
-                                </section>
-                            )}
-
                             <section className="drawer-section risk-assessment-section">
                                 <span className="drawer-section-label">
                                     AI risk assessment
@@ -866,11 +590,7 @@ export function AppointmentDetailsDrawer({
                                     </div>
 
                                     <div>
-                                        <span>
-                                            {isCompleted
-                                                ? "Original predicted turn"
-                                                : "Predicted turn"}
-                                        </span>
+                                        <span>Predicted turn</span>
 
                                         <strong>
                                             {recovery
@@ -895,9 +615,7 @@ export function AppointmentDetailsDrawer({
                                 <div className="comparison-grid">
                                     <div className="comparison-card">
                                         <span>
-                                            {isCompleted
-                                                ? "Original forecast without recovery"
-                                                : "Without recovery plan"}
+                                            Without recovery plan
                                         </span>
 
                                         <strong>
@@ -1281,6 +999,7 @@ export function AppointmentDetailsDrawer({
                                 </div>
                             </section>
 
+
                             <section className="drawer-section impact-panel">
                                 <div className="drawer-section-heading">
                                     <div>
@@ -1295,11 +1014,12 @@ export function AppointmentDetailsDrawer({
 
                                     {whatIfSimulation && (
                                         <span
-                                            className={`impact-status ${whatIfSimulation.scenario
-                                                .sla_recovered
-                                                ? "recovered"
-                                                : "at-risk"
-                                                }`}
+                                            className={`impact-status ${
+                                                whatIfSimulation.scenario
+                                                    .sla_recovered
+                                                    ? "recovered"
+                                                    : "at-risk"
+                                            }`}
                                         >
                                             {whatIfSimulation.scenario
                                                 .sla_recovered
@@ -1312,39 +1032,26 @@ export function AppointmentDetailsDrawer({
                                 <div className="what-if-controls">
                                     <label className="what-if-number-control">
                                         <span>Extra loaders</span>
-
                                         <div>
                                             <button
                                                 type="button"
                                                 disabled={extraLoaders <= 0}
                                                 onClick={() =>
-                                                    setExtraLoaders(
-                                                        (current) =>
-                                                            Math.max(
-                                                                0,
-                                                                current - 1,
-                                                            ),
+                                                    setExtraLoaders((current) =>
+                                                        Math.max(0, current - 1),
                                                     )
                                                 }
                                                 aria-label="Remove one extra loader"
                                             >
                                                 −
                                             </button>
-
-                                            <strong>
-                                                {extraLoaders}
-                                            </strong>
-
+                                            <strong>{extraLoaders}</strong>
                                             <button
                                                 type="button"
                                                 disabled={extraLoaders >= 5}
                                                 onClick={() =>
-                                                    setExtraLoaders(
-                                                        (current) =>
-                                                            Math.min(
-                                                                5,
-                                                                current + 1,
-                                                            ),
+                                                    setExtraLoaders((current) =>
+                                                        Math.min(5, current + 1),
                                                     )
                                                 }
                                                 aria-label="Add one extra loader"
@@ -1356,39 +1063,26 @@ export function AppointmentDetailsDrawer({
 
                                     <label className="what-if-number-control">
                                         <span>Extra forklifts</span>
-
                                         <div>
                                             <button
                                                 type="button"
                                                 disabled={extraForklifts <= 0}
                                                 onClick={() =>
-                                                    setExtraForklifts(
-                                                        (current) =>
-                                                            Math.max(
-                                                                0,
-                                                                current - 1,
-                                                            ),
+                                                    setExtraForklifts((current) =>
+                                                        Math.max(0, current - 1),
                                                     )
                                                 }
                                                 aria-label="Remove one extra forklift"
                                             >
                                                 −
                                             </button>
-
-                                            <strong>
-                                                {extraForklifts}
-                                            </strong>
-
+                                            <strong>{extraForklifts}</strong>
                                             <button
                                                 type="button"
                                                 disabled={extraForklifts >= 5}
                                                 onClick={() =>
-                                                    setExtraForklifts(
-                                                        (current) =>
-                                                            Math.min(
-                                                                5,
-                                                                current + 1,
-                                                            ),
+                                                    setExtraForklifts((current) =>
+                                                        Math.min(5, current + 1),
                                                     )
                                                 }
                                                 aria-label="Add one extra forklift"
@@ -1408,25 +1102,13 @@ export function AppointmentDetailsDrawer({
                                                 )
                                             }
                                         />
-
-                                        <span>
-                                            Pre-stage products
-                                        </span>
+                                        <span>Pre-stage products</span>
                                     </label>
                                 </div>
 
                                 {whatIfLoading && (
-                                    <div className="simulation-overlay">
-                                        <div className="simulation-spinner" />
-
-                                        <strong>
-                                            Running AI optimization
-                                        </strong>
-
-                                        <span>
-                                            Evaluating labor, equipment,
-                                            recovery actions, and SLA impact...
-                                        </span>
+                                    <div className="simulation-state">
+                                        Running operational simulation...
                                     </div>
                                 )}
 
@@ -1440,209 +1122,11 @@ export function AppointmentDetailsDrawer({
                                     !whatIfError &&
                                     whatIfSimulation && (
                                         <>
-                                            <div className="ai-value-comparison">
-                                                <article className="ai-value-column baseline">
-                                                    <span className="ai-value-label">
-                                                        Without recovery actions
-                                                    </span>
-
-                                                    <div>
-                                                        <span>Turn time</span>
-
-                                                        <strong>
-                                                            {
-                                                                whatIfSimulation.baseline
-                                                                    .predicted_turn_time_minutes
-                                                            }{" "}
-                                                            min
-                                                        </strong>
-                                                    </div>
-
-                                                    <div>
-                                                        <span>Risk score</span>
-
-                                                        <strong>
-                                                            {
-                                                                whatIfSimulation.baseline
-                                                                    .turn_risk_score
-                                                            }
-                                                            /100
-                                                        </strong>
-                                                    </div>
-
-                                                    <div>
-                                                        <span>Detention exposure</span>
-
-                                                        <strong>
-                                                            {formatCurrency(
-                                                                whatIfSimulation.baseline
-                                                                    .detention_exposure,
-                                                            )}
-                                                        </strong>
-                                                    </div>
-
-                                                    <div>
-                                                        <span>SLA result</span>
-
-                                                        <strong className="negative-impact">
-                                                            {whatIfSimulation.baseline
-                                                                .predicted_turn_time_minutes >
-                                                                whatIfSimulation.baseline
-                                                                    .sla_minutes
-                                                                ? "Miss predicted"
-                                                                : "Within SLA"}
-                                                        </strong>
-                                                    </div>
-                                                </article>
-
-                                                <div className="ai-value-divider">
-                                                    <span>AI</span>
-                                                    <strong>→</strong>
-                                                </div>
-
-                                                <article className="ai-value-column optimized">
-                                                    <span className="ai-value-label">
-                                                        With simulated plan
-                                                    </span>
-
-                                                    <div>
-                                                        <span>Turn time</span>
-
-                                                        <strong>
-                                                            {
-                                                                whatIfSimulation.scenario
-                                                                    .projected_turn_time_minutes
-                                                            }{" "}
-                                                            min
-                                                        </strong>
-                                                    </div>
-
-                                                    <div>
-                                                        <span>Risk score</span>
-
-                                                        <strong>
-                                                            {
-                                                                whatIfSimulation.scenario
-                                                                    .projected_risk_score
-                                                            }
-                                                            /100
-                                                        </strong>
-                                                    </div>
-
-                                                    <div>
-                                                        <span>Detention exposure</span>
-
-                                                        <strong>
-                                                            {formatCurrency(
-                                                                whatIfSimulation.scenario
-                                                                    .projected_detention_exposure,
-                                                            )}
-                                                        </strong>
-                                                    </div>
-
-                                                    <div>
-                                                        <span>SLA result</span>
-
-                                                        <strong
-                                                            className={
-                                                                whatIfSimulation.scenario
-                                                                    .sla_recovered
-                                                                    ? "positive-impact"
-                                                                    : "negative-impact"
-                                                            }
-                                                        >
-                                                            {whatIfSimulation.scenario
-                                                                .sla_recovered
-                                                                ? "Recovered"
-                                                                : "At risk"}
-                                                        </strong>
-                                                    </div>
-
-                                                    <div className="ai-net-value">
-                                                        <span>Net savings</span>
-
-                                                        <strong
-                                                            className={
-                                                                whatIfSimulation.scenario
-                                                                    .net_savings >= 0
-                                                                    ? "positive-impact"
-                                                                    : "negative-impact"
-                                                            }
-                                                        >
-                                                            {formatCurrency(
-                                                                whatIfSimulation.scenario
-                                                                    .net_savings,
-                                                            )}
-                                                        </strong>
-                                                    </div>
-                                                </article>
-                                            </div>
-                                            <div className="simulation-insights-grid">
-                                                <article className="simulation-insight-card">
-                                                    <span className="drawer-section-label">
-                                                        Top contributor
-                                                    </span>
-
-                                                    {topContributor ? (
-                                                        <>
-                                                            <strong>
-                                                                {topContributor.label}
-                                                            </strong>
-
-                                                            <p>
-                                                                Estimated contribution of{" "}
-                                                                <b>
-                                                                    {
-                                                                        topContributor
-                                                                            .minutesSaved
-                                                                    }{" "}
-                                                                    minutes
-                                                                </b>{" "}
-                                                                to the simulated recovery.
-                                                            </p>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <strong>
-                                                                No recovery action selected
-                                                            </strong>
-
-                                                            <p>
-                                                                Select an AI action or adjust
-                                                                warehouse resources.
-                                                            </p>
-                                                        </>
-                                                    )}
-                                                </article>
-
-                                                <article className="simulation-insight-card">
-                                                    <span className="drawer-section-label">
-                                                        Simulation confidence
-                                                    </span>
-
-                                                    <strong>
-                                                        {simulationConfidence ?? "—"}%
-                                                    </strong>
-
-                                                    <p>{confidenceLabel}</p>
-
-                                                    <div className="confidence-track">
-                                                        <div
-                                                            className="confidence-fill"
-                                                            style={{
-                                                                width: `${simulationConfidence ?? 0
-                                                                    }%`,
-                                                            }}
-                                                        />
-                                                    </div>
-                                                </article>
-                                            </div>
                                             <div className="impact-comparison">
                                                 <div className="impact-column">
                                                     <span>
-                                                        Baseline prediction
+                                                        Without recovery actions
                                                     </span>
-
                                                     <strong>
                                                         {
                                                             whatIfSimulation
@@ -1651,7 +1135,6 @@ export function AppointmentDetailsDrawer({
                                                         }
                                                         <small> min</small>
                                                     </strong>
-
                                                     <p>
                                                         Risk score{" "}
                                                         {
@@ -1663,15 +1146,12 @@ export function AppointmentDetailsDrawer({
                                                     </p>
                                                 </div>
 
-                                                <div className="impact-arrow">
-                                                    →
-                                                </div>
+                                                <div className="impact-arrow">→</div>
 
                                                 <div className="impact-column preview">
                                                     <span>
-                                                        Simulated outcome
+                                                        With simulated plan
                                                     </span>
-
                                                     <strong>
                                                         {
                                                             whatIfSimulation
@@ -1680,39 +1160,35 @@ export function AppointmentDetailsDrawer({
                                                         }
                                                         <small> min</small>
                                                     </strong>
-
                                                     <p>
                                                         {whatIfSimulation
                                                             .scenario
                                                             .sla_recovered
                                                             ? `${Math.max(
-                                                                0,
-                                                                whatIfSimulation
-                                                                    .baseline
-                                                                    .sla_minutes -
-                                                                whatIfSimulation
-                                                                    .scenario
-                                                                    .projected_turn_time_minutes,
-                                                            )} minutes within SLA`
+                                                                  0,
+                                                                  whatIfSimulation
+                                                                      .baseline
+                                                                      .sla_minutes -
+                                                                      whatIfSimulation
+                                                                          .scenario
+                                                                          .projected_turn_time_minutes,
+                                                              )} minutes within SLA`
                                                             : `${Math.max(
-                                                                0,
-                                                                whatIfSimulation
-                                                                    .scenario
-                                                                    .projected_turn_time_minutes -
-                                                                whatIfSimulation
-                                                                    .baseline
-                                                                    .sla_minutes,
-                                                            )} minutes above SLA`}
+                                                                  0,
+                                                                  whatIfSimulation
+                                                                      .scenario
+                                                                      .projected_turn_time_minutes -
+                                                                      whatIfSimulation
+                                                                          .baseline
+                                                                          .sla_minutes,
+                                                              )} minutes above SLA`}
                                                     </p>
                                                 </div>
                                             </div>
 
                                             <div className="impact-metrics-grid">
                                                 <div>
-                                                    <span>
-                                                        Selected AI actions
-                                                    </span>
-
+                                                    <span>Selected AI actions</span>
                                                     <strong>
                                                         {
                                                             whatIfSimulation
@@ -1721,12 +1197,8 @@ export function AppointmentDetailsDrawer({
                                                         }
                                                     </strong>
                                                 </div>
-
                                                 <div>
-                                                    <span>
-                                                        Total minutes saved
-                                                    </span>
-
+                                                    <span>Total minutes saved</span>
                                                     <strong>
                                                         {
                                                             whatIfSimulation
@@ -1736,12 +1208,8 @@ export function AppointmentDetailsDrawer({
                                                         min
                                                     </strong>
                                                 </div>
-
                                                 <div>
-                                                    <span>
-                                                        Projected risk score
-                                                    </span>
-
+                                                    <span>Projected risk score</span>
                                                     <strong>
                                                         {
                                                             whatIfSimulation
@@ -1751,12 +1219,8 @@ export function AppointmentDetailsDrawer({
                                                         /100
                                                     </strong>
                                                 </div>
-
                                                 <div>
-                                                    <span>
-                                                        Recovery probability
-                                                    </span>
-
+                                                    <span>Recovery probability</span>
                                                     <strong>
                                                         {formatPercent(
                                                             whatIfSimulation
@@ -1765,12 +1229,8 @@ export function AppointmentDetailsDrawer({
                                                         )}
                                                     </strong>
                                                 </div>
-
                                                 <div>
-                                                    <span>
-                                                        Action cost
-                                                    </span>
-
+                                                    <span>Action cost</span>
                                                     <strong>
                                                         {formatCurrency(
                                                             whatIfSimulation
@@ -1779,12 +1239,8 @@ export function AppointmentDetailsDrawer({
                                                         )}
                                                     </strong>
                                                 </div>
-
                                                 <div>
-                                                    <span>
-                                                        Gross savings
-                                                    </span>
-
+                                                    <span>Gross savings</span>
                                                     <strong>
                                                         {formatCurrency(
                                                             whatIfSimulation
@@ -1793,12 +1249,8 @@ export function AppointmentDetailsDrawer({
                                                         )}
                                                     </strong>
                                                 </div>
-
                                                 <div>
-                                                    <span>
-                                                        Projected detention
-                                                    </span>
-
+                                                    <span>Projected detention</span>
                                                     <strong>
                                                         {formatCurrency(
                                                             whatIfSimulation
@@ -1807,12 +1259,8 @@ export function AppointmentDetailsDrawer({
                                                         )}
                                                     </strong>
                                                 </div>
-
                                                 <div>
-                                                    <span>
-                                                        Net savings
-                                                    </span>
-
+                                                    <span>Net savings</span>
                                                     <strong
                                                         className={
                                                             whatIfSimulation
@@ -1833,20 +1281,16 @@ export function AppointmentDetailsDrawer({
 
                                             <div className="sla-progress">
                                                 <div className="sla-progress-heading">
-                                                    <span>
-                                                        Projected SLA usage
-                                                    </span>
-
+                                                    <span>Projected SLA usage</span>
                                                     <strong>
                                                         {Math.round(
-                                                            (
-                                                                whatIfSimulation
-                                                                    .scenario
-                                                                    .projected_turn_time_minutes /
+                                                            (whatIfSimulation
+                                                                .scenario
+                                                                .projected_turn_time_minutes /
                                                                 whatIfSimulation
                                                                     .baseline
-                                                                    .sla_minutes
-                                                            ) * 100,
+                                                                    .sla_minutes) *
+                                                                100,
                                                         )}
                                                         %
                                                     </strong>
@@ -1854,24 +1298,24 @@ export function AppointmentDetailsDrawer({
 
                                                 <div className="sla-progress-track">
                                                     <div
-                                                        className={`sla-progress-fill ${whatIfSimulation
-                                                            .scenario
-                                                            .sla_recovered
-                                                            ? "recovered"
-                                                            : "at-risk"
-                                                            }`}
+                                                        className={`sla-progress-fill ${
+                                                            whatIfSimulation
+                                                                .scenario
+                                                                .sla_recovered
+                                                                ? "recovered"
+                                                                : "at-risk"
+                                                        }`}
                                                         style={{
                                                             width: `${Math.min(
                                                                 100,
                                                                 Math.round(
-                                                                    (
-                                                                        whatIfSimulation
-                                                                            .scenario
-                                                                            .projected_turn_time_minutes /
+                                                                    (whatIfSimulation
+                                                                        .scenario
+                                                                        .projected_turn_time_minutes /
                                                                         whatIfSimulation
                                                                             .baseline
-                                                                            .sla_minutes
-                                                                    ) * 100,
+                                                                            .sla_minutes) *
+                                                                        100,
                                                                 ),
                                                             )}%`,
                                                         }}
@@ -1880,7 +1324,6 @@ export function AppointmentDetailsDrawer({
 
                                                 <div className="sla-progress-labels">
                                                     <span>0 min</span>
-
                                                     <span>
                                                         SLA target:{" "}
                                                         {
@@ -1905,28 +1348,6 @@ export function AppointmentDetailsDrawer({
                                         </div>
                                     )}
                             </section>
-
-                            <AppointmentCopilot
-                                appointmentId={
-                                    selectedAppointment.appt_id
-                                }
-                                recommendationId={
-                                    details.recommendation
-                                        ?.recommendation_id ?? null
-                                }
-                                recommendationActions={
-                                    details.recommendation_actions
-                                }
-                                selectedActionIds={
-                                    Array.from(selectedActionIds)
-                                }
-                                extraLoaders={extraLoaders}
-                                extraForklifts={extraForklifts}
-                                preStageProducts={
-                                    preStageProducts
-                                }
-                                onRefresh={onRefresh}
-                            />
 
                             <section className="drawer-section recovery-value-section">
                                 <span className="drawer-section-label">
@@ -2105,32 +1526,6 @@ export function AppointmentDetailsDrawer({
                                                     {event.notes && (
                                                         <p>{event.notes}</p>
                                                     )}
-
-                                                    {event.performed_by && (
-                                                        <span className="timeline-actor">
-                                                            By {event.performed_by}
-                                                        </span>
-                                                    )}
-
-                                                    {(event.old_value !== null ||
-                                                        event.new_value !== null) && (
-                                                        <div className="timeline-change">
-                                                            {event.field_name && (
-                                                                <span className="timeline-field">
-                                                                    {event.field_name.replaceAll("_", " ")}
-                                                                </span>
-                                                            )}
-                                                            <div>
-                                                                <span className="timeline-old-value">
-                                                                    {event.old_value ?? "Not set"}
-                                                                </span>
-                                                                <span aria-hidden="true">→</span>
-                                                                <strong>
-                                                                    {event.new_value ?? "Removed"}
-                                                                </strong>
-                                                            </div>
-                                                        </div>
-                                                    )}
                                                 </div>
                                             </div>
                                         );
@@ -2144,6 +1539,8 @@ export function AppointmentDetailsDrawer({
                                 </div>
                             </section>
 
+
+                            <AppointmentCopilot appointmentId={selectedAppointment.appt_id} recommendationId={recommendation?.recommendation_id ?? null} recommendationActions={details.recommendation_actions} selectedActionIds={Array.from(selectedActionIds)} extraLoaders={extraLoaders} extraForklifts={extraForklifts} preStageProducts={preStageProducts} onRefresh={onRefresh} />
 
                             {decisionError && (
                                 <div className="table-error">
@@ -2206,14 +1603,6 @@ export function AppointmentDetailsDrawer({
                     )}
                 </div>
             </aside>
-            {editOpen && details && (
-                <EditAppointmentDrawer
-                    open={editOpen}
-                    details={details}
-                    onClose={() => setEditOpen(false)}
-                    onUpdated={onRefresh}
-                />
-            )}
         </>
     );
 }

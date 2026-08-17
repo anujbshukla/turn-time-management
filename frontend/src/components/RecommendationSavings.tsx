@@ -17,7 +17,7 @@ export function RecommendationSavings({ savings }: Props) {
                 <div>
                     <span className="panel-eyebrow">Financial intelligence</span>
                     <h2>Recommendation Savings Comparison</h2>
-                    <p>Estimated operating impact with and without accepted recovery recommendations.</p>
+                    <p>Estimated operating impact from current ML risk and recovery opportunity.</p>
                 </div>
                 <div className="savings-hero-metric">
                     <span>Net savings</span>
@@ -39,10 +39,27 @@ export function RecommendationSavings({ savings }: Props) {
                     <small>Exposure plus action cost</small>
                 </div>
                 <div className="savings-support-metrics">
-                    <div><span>Gross savings</span><strong>{money(savings.gross_savings)}</strong></div>
+                    <div><span>Projected savings</span><strong>{money(savings.gross_savings)}</strong></div>
                     <div><span>Action cost</span><strong>{money(savings.action_cost)}</strong></div>
                     <div><span>Recommendation ROI</span><strong>{savings.roi.toFixed(1)}×</strong></div>
                 </div>
+            </div>
+
+            <div className="savings-value-basis">
+                <span>
+                    {savings.value_basis === "what_if_scenario"
+                        ? "Scenario projection"
+                        : "Live ML projection"}
+                </span>
+                <span>
+                    {savings.opportunity_appointments ?? 0} appointments with projected detention exposure
+                </span>
+                <span>
+                    Accepted value {money(savings.accepted_gross_savings ?? 0)}
+                </span>
+                <span>
+                    Realized value {money(savings.realized_gross_savings ?? 0)}
+                </span>
             </div>
         </section>
     );

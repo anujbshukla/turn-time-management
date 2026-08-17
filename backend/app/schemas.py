@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from enum import Enum
 from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
@@ -380,6 +380,26 @@ class DashboardWhatIfRequest(BaseModel):
         default=None,
         max_length=50,
     )
+
+    customer_id: str | None = Field(
+        default=None,
+        max_length=100,
+    )
+
+    carrier_id: str | None = Field(
+        default=None,
+        max_length=100,
+    )
+
+    appointment_type: Literal[
+        "Inbound",
+        "Outbound",
+    ] | None = None
+
+    # Exclusive operating-window boundaries, matching
+    # the global dashboard filter contract.
+    date_from: date | None = None
+    date_to: date | None = None
 # ==========================================================
 # Global Dashboard Copilot
 # ==========================================================
@@ -427,3 +447,19 @@ class GlobalCopilotResponse(BaseModel):
     )
 
     action_intent: CopilotActionIntent | None = None
+# ==========================================================
+# Multi-Appointment Optimization
+# ==========================================================
+
+class OptimizationWindowRequest(BaseModel):
+    facility_id: str | None = Field(default=None, max_length=100)
+    customer_id: str | None = Field(default=None, max_length=100)
+    carrier_id: str | None = Field(default=None, max_length=100)
+    appointment_type: Literal["Inbound", "Outbound"] | None = None
+    date_from: date | None = None
+    date_to: date | None = None
+    max_missions: int = Field(default=5, ge=1, le=10)
+
+
+class OptimizationMissionStatusRequest(BaseModel):
+    status: Literal["Proposed", "Accepted", "Completed", "Dismissed"]

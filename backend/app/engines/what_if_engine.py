@@ -27,6 +27,7 @@ class WhatIfEngine:
         extra_loaders: int = 0,
         extra_forklifts: int = 0,
         pre_stage_products: bool = False,
+        scenario_prediction: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         if prediction is None:
             raise ValueError(
@@ -168,59 +169,213 @@ class WhatIfEngine:
             + manual_minutes_saved
         )
 
-        # Avoid unrealistic reductions below a basic
-        # operational floor.
+        has_intervention = bool(
+            selected_actions
+            or extra_loaders > 0
+            or extra_forklifts > 0
+            or pre_stage_products
+        )
+
+        # Important modeling rule:
+        #
+        # ML-v2 is predictive, not causal. Historical high-complexity loads
+        # naturally received more loaders/forklifts, so directly comparing a
+        # re-scored resource scenario with the current prediction can create a
+        # spurious increase in predicted duration.
+        #
+        # What-If therefore anchors every scenario to the CURRENT prediction.
+        # With no intervention, the scenario is exactly the baseline. With a
+        # recovery intervention, explicit operational minutes-saved estimates
+        # determine the turn-time delta. ML-v2 scenario probabilities/risk may
+        # inform the result only when they improve the baseline; they can never
+        # make a recovery scenario worse.
+
         operational_floor = max(
             30,
             round(predicted_duration * 0.35),
         )
 
-        projected_turn_time = max(
-            operational_floor,
-            baseline_turn_time
-            - total_minutes_saved,
-        )
-
-        actual_minutes_saved = max(
-            0,
-            baseline_turn_time
-            - projected_turn_time,
-        )
-
-        improvement_ratio = (
-            actual_minutes_saved
-            / baseline_turn_time
-            if baseline_turn_time > 0
-            else 0
-        )
-
-        projected_miss_probability = max(
-            0.02,
-            min(
-                0.99,
+        if not has_intervention:
+            projected_turn_time = baseline_turn_time
+            actual_minutes_saved = 0.0
+            projected_miss_probability = (
                 baseline_miss_probability
-                - improvement_ratio * 0.90,
-            ),
-        )
-
-        if projected_turn_time <= sla_minutes:
-            projected_miss_probability = min(
-                projected_miss_probability,
-                0.25,
+            )
+            projected_recovery_probability = float(
+                prediction.get(
+                    "sla_recovery_probability",
+                    1 - baseline_miss_probability,
+                )
+                or (
+                    1
+                    - baseline_miss_probability
+                )
+            )
+            projected_risk_score = baseline_risk_score
+        else:
+            # Recovery actions already carry operationally interpretable
+            # minutes-saved estimates. Manual What-If controls use the same
+            # explicit intervention assumptions defined by this engine.
+            projected_turn_time = max(
+                operational_floor,
+                baseline_turn_time
+                - total_minutes_saved,
             )
 
-        projected_recovery_probability = (
-            1 - projected_miss_probability
-        )
+            # A recovery plan is non-worsening by definition in this UI.
+            projected_turn_time = min(
+                baseline_turn_time,
+                projected_turn_time,
+            )
 
-        projected_risk_score = max(
-            0,
-            min(
-                100,
-                baseline_risk_score
-                - improvement_ratio * 85,
-            ),
-        )
+            actual_minutes_saved = max(
+                0.0,
+                baseline_turn_time
+                - projected_turn_time,
+            )
+
+            improvement_ratio = (
+                actual_minutes_saved
+                / baseline_turn_time
+                if baseline_turn_time > 0
+                else 0.0
+            )
+
+            deterministic_miss_probability = max(
+                0.001,
+                min(
+                    0.999,
+                    baseline_miss_probability
+                    - improvement_ratio * 0.90,
+                ),
+            )
+
+            deterministic_risk_score = max(
+                0.0,
+                min(
+                    100.0,
+                    baseline_risk_score
+                    - improvement_ratio * 85,
+                ),
+            )
+
+            deterministic_recovery_probability = max(
+                0.001,
+                min(
+                    0.999,
+                    max(
+                        float(
+                            prediction.get(
+                                "sla_recovery_probability",
+                                1
+                                - baseline_miss_probability,
+                            )
+                            or (
+                                1
+                                - baseline_miss_probability
+                            )
+                        ),
+                        1
+                        - deterministic_miss_probability,
+                    ),
+                ),
+            )
+
+            if scenario_prediction is not None:
+                model_miss_probability = max(
+                    0.001,
+                    min(
+                        0.999,
+                        float(
+                            scenario_prediction.get(
+                                "sla_miss_probability",
+                                deterministic_miss_probability,
+                            )
+                            or deterministic_miss_probability
+                        ),
+                    ),
+                )
+                model_risk_score = max(
+                    0.0,
+                    min(
+                        100.0,
+                        float(
+                            scenario_prediction.get(
+                                "turn_risk_score",
+                                deterministic_risk_score,
+                            )
+                            or deterministic_risk_score
+                        ),
+                    ),
+                )
+                model_recovery_probability = max(
+                    0.001,
+                    min(
+                        0.999,
+                        float(
+                            scenario_prediction.get(
+                                "sla_recovery_probability",
+                                deterministic_recovery_probability,
+                            )
+                            or deterministic_recovery_probability
+                        ),
+                    ),
+                )
+
+                # Only accept ML-v2 scenario signals when they improve the
+                # baseline/intervention estimate. This protects the UI from
+                # observational confounding in resource-allocation features.
+                projected_miss_probability = min(
+                    baseline_miss_probability,
+                    deterministic_miss_probability,
+                    model_miss_probability,
+                )
+                projected_risk_score = min(
+                    baseline_risk_score,
+                    deterministic_risk_score,
+                    model_risk_score,
+                )
+                projected_recovery_probability = max(
+                    float(
+                        prediction.get(
+                            "sla_recovery_probability",
+                            1
+                            - baseline_miss_probability,
+                        )
+                        or (
+                            1
+                            - baseline_miss_probability
+                        )
+                    ),
+                    deterministic_recovery_probability,
+                    model_recovery_probability,
+                )
+            else:
+                projected_miss_probability = min(
+                    baseline_miss_probability,
+                    deterministic_miss_probability,
+                )
+                projected_risk_score = min(
+                    baseline_risk_score,
+                    deterministic_risk_score,
+                )
+                projected_recovery_probability = (
+                    deterministic_recovery_probability
+                )
+
+            if projected_turn_time <= sla_minutes:
+                projected_miss_probability = min(
+                    projected_miss_probability,
+                    0.25,
+                )
+
+            projected_recovery_probability = max(
+                0.001,
+                min(
+                    0.999,
+                    projected_recovery_probability,
+                ),
+            )
 
         baseline_excess_minutes = max(
             0,
@@ -333,6 +488,17 @@ class WhatIfEngine:
                     round(
                         net_savings,
                         2,
+                    ),
+                "model_version":
+                    (
+                        scenario_prediction.get(
+                            "model_version"
+                        )
+                        if scenario_prediction
+                        is not None
+                        else prediction.get(
+                            "model_version"
+                        )
                     ),
             },
         }

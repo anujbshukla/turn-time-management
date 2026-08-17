@@ -16,6 +16,7 @@ from app.api.dashboard import (
     router as dashboard_router,
 )
 from app.api.ml import router as ml_router
+from app.api.optimization import router as optimization_router
 from app.api.recommendations import (
     router as recommendations_router,
 )
@@ -75,6 +76,10 @@ fastapi_app.include_router(
 
 fastapi_app.include_router(
     ml_router,
+)
+
+fastapi_app.include_router(
+    optimization_router,
 )
 
 

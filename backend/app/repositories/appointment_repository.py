@@ -355,6 +355,106 @@ class AppointmentRepository:
             },
         }
 
+    def _ensure_recovery_plan_for_at_risk_appointment(
+        self,
+        *,
+        appointment: dict[str, Any],
+        prediction: dict[str, Any] | None,
+        recommendation: dict[str, Any] | None,
+    ) -> dict[str, Any] | None:
+        """Create a structured recovery plan only when an active at-risk
+        appointment has no recommendation actions.
+
+        This deliberately reuses create_initial_recommendation(), which is
+        already part of this repository and writes to the existing
+        appointment_recommendations / recommendation_actions schema.
+        """
+        if prediction is None:
+            return recommendation
+
+        if appointment.get("status") == "Completed":
+            return recommendation
+
+        predicted_delay = max(
+            0,
+            int(prediction.get("predicted_delay_minutes") or 0),
+        )
+        predicted_duration = max(
+            0,
+            int(prediction.get("predicted_duration_minutes") or 0),
+        )
+        predicted_turn_time = predicted_delay + predicted_duration
+        risk_score = int(prediction.get("turn_risk_score") or 0)
+        predicted_missed = bool(prediction.get("predicted_missed"))
+        sla_minutes = int(appointment.get("sla_minutes") or 120)
+
+        is_at_risk = (
+            risk_score >= 60
+            or predicted_missed
+            or predicted_turn_time > sla_minutes
+        )
+        if not is_at_risk:
+            return recommendation
+
+        if recommendation is not None:
+            action_count = self.db.execute(
+                text(
+                    """
+                    SELECT COUNT(*)
+                    FROM recommendation_actions
+                    WHERE recommendation_id = :recommendation_id;
+                    """
+                ),
+                {
+                    "recommendation_id":
+                        recommendation["recommendation_id"],
+                },
+            ).scalar_one()
+
+            if int(action_count or 0) > 0:
+                return recommendation
+
+        # Create a new latest recommendation with structured actions.
+        # Use total predicted turn time (delay + service duration) so the
+        # recovery plan reflects the full SLA exposure.
+        self.create_initial_recommendation(
+            appt_id=appointment["appt_id"],
+            dock_id=appointment.get("assigned_dock_id"),
+            predicted_duration_minutes=predicted_turn_time,
+            sla_minutes=sla_minutes,
+            detention_cost_per_hour=float(
+                appointment.get("detention_cost_per_hour") or 0
+            ),
+        )
+
+        refreshed = self.db.execute(
+            text(
+                """
+                SELECT
+                    recommendation_id,
+                    recommendation_type,
+                    recommended_action,
+                    recommended_dock_id,
+                    recommended_sequence,
+                    additional_labor,
+                    estimated_loss_without_action,
+                    estimated_cost_of_action,
+                    estimated_savings,
+                    status,
+                    created_at,
+                    responded_at,
+                    responded_by
+                FROM appointment_recommendations
+                WHERE appt_id = :appt_id
+                ORDER BY created_at DESC
+                LIMIT 1;
+                """
+            ),
+            {"appt_id": appointment["appt_id"]},
+        ).mappings().one_or_none()
+
+        return dict(refreshed) if refreshed is not None else recommendation
+
     def get_details(
         self,
         appt_id: str,
@@ -645,6 +745,27 @@ class AppointmentRepository:
             {"appt_id": appt_id},
         ).mappings().one_or_none()
 
+        appointment_dict = dict(appointment)
+
+        prediction_dict = (
+            dict(prediction)
+            if prediction is not None
+            else None
+        )
+
+        recommendation_dict = (
+            dict(recommendation)
+            if recommendation is not None
+            else None
+        )
+
+        recommendation_dict = self._ensure_recovery_plan_for_at_risk_appointment(
+            appointment=appointment_dict,
+            prediction=prediction_dict,
+            recommendation=recommendation_dict,
+        )
+        recommendation = recommendation_dict
+
         actions: list[dict[str, Any]] = []
 
         if recommendation is not None:
@@ -691,20 +812,6 @@ class AppointmentRepository:
                 dict(row)
                 for row in action_rows
             ]
-
-        appointment_dict = dict(appointment)
-
-        prediction_dict = (
-            dict(prediction)
-            if prediction is not None
-            else None
-        )
-
-        recommendation_dict = (
-            dict(recommendation)
-            if recommendation is not None
-            else None
-        )
 
         # Merge original operational events with
         # recovery-action decision events.

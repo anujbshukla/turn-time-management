@@ -116,6 +116,12 @@ export interface RecommendationSavings {
   with_recommendations: number;
   roi: number;
   cost_reduction_percent: number;
+  projected_gross_savings?: number;
+  projected_action_cost?: number;
+  accepted_gross_savings?: number;
+  realized_gross_savings?: number;
+  opportunity_appointments?: number;
+  value_basis?: "projected_ml_opportunity" | "what_if_scenario" | string;
 }
 
 
@@ -390,6 +396,11 @@ export interface DashboardWhatIfRequest {
   extra_forklifts: number;
   pre_stage_products: boolean;
   facility_id?: string;
+  customer_id?: string;
+  carrier_id?: string;
+  appointment_type?: "Inbound" | "Outbound";
+  date_from?: string;
+  date_to?: string;
   booking_draft?: GlobalCopilotBookingDraft | null;
 }
 
@@ -411,10 +422,19 @@ export interface DashboardWhatIfScenario extends DashboardWhatIfMetrics {
 export interface DashboardWhatIfResponse {
   active: boolean;
   inputs: DashboardWhatIfRequest;
+  scope: {
+    candidate_appointments: number;
+    operating_window_only: boolean;
+  };
   baseline: DashboardWhatIfMetrics;
   scenario: DashboardWhatIfScenario;
   assumptions: string[];
-  dashboard: DashboardResponse;
+  dashboard_patch: {
+    summary: Partial<DashboardSummary>;
+    late_appointment_outcomes: LateAppointmentOutcome[];
+    risk_distribution: RiskDistributionItem[];
+    recommendation_savings: RecommendationSavings;
+  };
 }
 
 export type GlobalCopilotActionType =

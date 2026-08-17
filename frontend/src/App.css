@@ -10282,3 +10282,141 @@ h1 {
   line-height: 1;
   text-transform: lowercase;
 }
+
+
+.savings-value-basis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 12px;
+  color: #64748b;
+  font-size: 0.72rem;
+}
+
+.savings-value-basis span:first-child {
+  color: #3158a5;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ==========================================================
+   Readability pass — highlighted intelligence surfaces
+   Increased secondary/detail typography without scaling the
+   primary dashboard headings or KPI values.
+========================================================== */
+
+/* Global operating window, filters and comparison */
+.operations-filter-shell .filter-eyebrow,
+.operations-filter-shell .filter-field > span,
+.operations-filter-shell .compare-control > span {
+  font-size: 10px;
+}
+.operations-filter-shell .date-preset-button,
+.operations-filter-shell .compare-control select,
+.operations-filter-shell .filter-field select,
+.operations-filter-shell .filter-field input,
+.operations-filter-shell .clear-global-filters {
+  font-size: 11px;
+}
+.operations-filter-shell .comparison-banner strong { font-size: 11px; }
+.operations-filter-shell .comparison-banner span:last-child { font-size: 10px; }
+.operations-filter-shell .comparison-metric > span { font-size: 9px; }
+.operations-filter-shell .comparison-values small,
+.operations-filter-shell .comparison-metric em { font-size: 10px; }
+
+/* AI Mission Center */
+.recommendations-action-row .ai-mission-center .panel-eyebrow { font-size: 10px; }
+.recommendations-action-row .ai-mission-card-heading time { font-size: 11px; }
+.recommendations-action-row .ai-mission-badges > span { font-size: 10px; }
+.recommendations-action-row .ai-mission-content > p { font-size: 12px; }
+.recommendations-action-row .ai-mission-metrics span { font-size: 10px; }
+.recommendations-action-row .ai-mission-metrics strong { font-size: 13px; }
+.recommendations-action-row .ai-mission-actions-list span { font-size: 10px; }
+.recommendations-action-row .ai-mission-card-actions button { font-size: 11px; }
+.recommendations-action-row .ai-mission-priority span,
+.recommendations-action-row .ai-mission-priority small { font-size: 10px; }
+
+/* Interactive AI Actions */
+.recommendations-action-row .mission-style-actions .ai-action-cards-description { font-size: 11px; }
+.recommendations-action-row .mission-style-actions .ai-action-severity,
+.recommendations-action-row .mission-style-actions .ai-action-source { font-size: 9px; }
+.recommendations-action-row .mission-style-actions .ai-action-confidence { font-size: 10px; }
+.recommendations-action-row .mission-style-actions .ai-action-card > p { font-size: 11px; }
+.recommendations-action-row .mission-style-actions .ai-action-metrics span { font-size: 9px; }
+.recommendations-action-row .mission-style-actions .ai-action-metrics strong { font-size: 12px; }
+.recommendations-action-row .mission-style-actions .ai-action-recommendation,
+.recommendations-action-row .mission-style-actions .ai-action-recommendation strong { font-size: 10px; }
+.recommendations-action-row .mission-style-actions .ai-action-card-actions button { font-size: 10px; }
+
+/* Root Cause Intelligence filters and supporting copy */
+.independent-intelligence-section .panel-eyebrow { font-size: 10px; }
+.independent-intelligence-section .intelligence-filter-row label > span { font-size: 10px; }
+.independent-intelligence-section .intelligence-filter-row select,
+.independent-intelligence-section .intelligence-filter-row input { font-size: 11px; }
+.independent-intelligence-section p { font-size: 11px; }
+
+/* Predictive Timeline */
+.predictive-timeline-header p { font-size: 11px; }
+.predictive-timeline-summary span { font-size: 10px; }
+.predictive-timeline-summary strong { font-size: 12px; }
+.predictive-timeline-filters button { font-size: 10px; }
+.predictive-now-line { font-size: 10px; }
+.predictive-event time { font-size: 11px; }
+.predictive-severity,
+.predictive-event-type { font-size: 9px; }
+.predictive-event-copy strong { font-size: 12px; }
+.predictive-event-copy small { font-size: 10px; }
+.predictive-confidence { font-size: 10px; }
+.predictive-detail-topline time { font-size: 11px; }
+.predictive-timeline-detail > p { font-size: 11px; }
+.predictive-detail-metrics span { font-size: 9px; }
+.predictive-detail-metrics strong { font-size: 12px; }
+.predictive-detail-location { font-size: 10px; }
+.predictive-recommendation span { font-size: 9px; }
+.predictive-recommendation strong { font-size: 11px; }
+.predictive-detail-actions button { font-size: 10px; }
+
+/* Watch Operating Conditions / Executive Intelligence */
+.executive-center .operations-status-label { font-size: 10px; }
+.executive-center .operations-status-copy strong { font-size: 14px; }
+.executive-center .operations-status-metrics span { font-size: 10px; }
+.executive-center .executive-eyebrow { font-size: 10px; }
+.executive-center .executive-ai-chip { font-size: 10px; }
+.executive-center .executive-headline-grid span { font-size: 10px; }
+.executive-center .executive-headline-grid strong { font-size: 16px; }
+.executive-center .executive-primary-action { font-size: 11px; }
+
+/* AI Prediction Center */
+.prediction-center .prediction-center-eyebrow,
+.prediction-center .prediction-subheading > div > span { font-size: 10px; }
+.prediction-center .prediction-window-badge { font-size: 11px; }
+.prediction-center .prediction-card-topline > span:first-child { font-size: 11px; }
+.prediction-center .prediction-value-row span { font-size: 11px; }
+.prediction-center .prediction-confidence > div:first-child span,
+.prediction-center .prediction-confidence > div:first-child strong { font-size: 10px; }
+.prediction-center .prediction-context dt { font-size: 10px; }
+.prediction-center .prediction-context dd { font-size: 11px; }
+.prediction-center .prediction-subheading small { font-size: 10px; }
+.prediction-center .prediction-risk-table th { font-size: 9px; }
+.prediction-center .prediction-risk-table td { font-size: 11px; }
+.prediction-center .prediction-risk-chip { font-size: 9px; }
+.prediction-center .prediction-history-legend { font-size: 10px; }
+.prediction-center .prediction-history-column strong { font-size: 11px; }
+.prediction-center .prediction-history-column > span { font-size: 9px; }
+
+/* Warehouse Risk Heat Map */
+.warehouse-risk-heatmap-panel .warehouse-heatmap-facility-summary span { font-size: 10px; }
+.warehouse-risk-heatmap-panel .warehouse-heatmap-facility-summary strong { font-size: 16px; }
+.warehouse-risk-heatmap-panel .warehouse-heatmap-layers button { font-size: 11px; }
+.warehouse-risk-heatmap-panel .warehouse-floor-label { font-size: 10px; }
+.warehouse-risk-heatmap-panel .warehouse-dock-tile-heading strong { font-size: 14px; }
+.warehouse-risk-heatmap-panel .warehouse-dock-tile-heading span { font-size: 9px; }
+.warehouse-risk-heatmap-panel .warehouse-dock-primary-value span { font-size: 10px; }
+.warehouse-risk-heatmap-panel .warehouse-dock-mini-metrics span { font-size: 9px; }
+.warehouse-risk-heatmap-panel .warehouse-dock-tile > i { font-size: 9px; }
+.warehouse-risk-heatmap-panel .warehouse-heatmap-legend { font-size: 11px; }
+.warehouse-risk-heatmap-panel .warehouse-dock-detail-panel p { font-size: 11px; }
+.warehouse-risk-heatmap-panel .warehouse-dock-detail-metrics span { font-size: 9px; }
+.warehouse-risk-heatmap-panel .warehouse-dock-detail-metrics strong { font-size: 12px; }
+.warehouse-risk-heatmap-panel .warehouse-dock-detail-actions button { font-size: 10px; }

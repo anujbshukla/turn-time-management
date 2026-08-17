@@ -54,3 +54,5 @@ ml/models/*.onnx
 
 Thumbs.db
 .DS_Store
+# Local database backups
+*.dump

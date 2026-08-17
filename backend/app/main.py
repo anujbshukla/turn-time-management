@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
 from fastapi.exceptions import (
     RequestValidationError,
 )
@@ -16,10 +16,13 @@ from app.api.dashboard import (
     router as dashboard_router,
 )
 from app.api.ml import router as ml_router
+from app.api.optimization import router as optimization_router
 from app.api.recommendations import (
     router as recommendations_router,
 )
 from app.config import get_settings
+from app.database import engine
+from app.services.readiness_service import ReadinessService
 from app.errors import (
     AppError,
     app_error_handler,
@@ -77,6 +80,10 @@ fastapi_app.include_router(
     ml_router,
 )
 
+fastapi_app.include_router(
+    optimization_router,
+)
+
 
 @fastapi_app.get("/")
 def root() -> dict[str, str]:
@@ -95,6 +102,16 @@ def health() -> dict[str, str]:
         "version":
             settings.api_version,
     }
+
+
+@fastapi_app.get("/health/readiness")
+def readiness(
+    response: Response,
+) -> dict[str, object]:
+    result = ReadinessService(engine).check()
+    if not result["ready"]:
+        response.status_code = 503
+    return result
 
 
 # Keep the explicit configured origins for non-local environments and allow

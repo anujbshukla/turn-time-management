@@ -190,6 +190,7 @@ export function AppointmentTable({
                     disabled={loading}
                     onSortChange={onSortChange}
                   />
+                  <th>Expected Arrival</th>
                   <SortableHeader
                     field="status"
                     label="Status"
@@ -280,6 +281,18 @@ export function AppointmentTable({
                         })}
                       </td>
                       <td>
+                        {appointment.estimated_arrival_time
+                          ? new Date(
+                              appointment.estimated_arrival_time,
+                            ).toLocaleString([], {
+                              month: "short",
+                              day: "numeric",
+                              hour: "numeric",
+                              minute: "2-digit",
+                            })
+                          : "—"}
+                      </td>
+                      <td>
                         <span
                           className={`status-badge status-${statusClass}`}
                         >
@@ -300,7 +313,7 @@ export function AppointmentTable({
                 {appointments.length === 0 && (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={8}
                       className="empty-table-cell"
                     >
                       No appointments found.

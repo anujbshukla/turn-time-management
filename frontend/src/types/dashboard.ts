@@ -116,6 +116,12 @@ export interface RecommendationSavings {
   with_recommendations: number;
   roi: number;
   cost_reduction_percent: number;
+  projected_gross_savings?: number;
+  projected_action_cost?: number;
+  accepted_gross_savings?: number;
+  realized_gross_savings?: number;
+  opportunity_appointments?: number;
+  value_basis?: "projected_ml_opportunity" | "what_if_scenario" | string;
 }
 
 
@@ -211,11 +217,21 @@ export interface OperationalAlert {
 
 export interface AiMission {
   mission_id: string;
+  database_mission_id?: number;
+  facility_id?: string;
+  facility_name?: string;
+  window_start?: string;
+  window_end?: string;
   severity: "Info" | "Warning" | "High" | "Critical";
   category: string;
   title: string;
   objective: string;
-  status: "Proposed" | "Accepted" | "Completed" | "Dismissed";
+  status:
+    | "Proposed"
+    | "Accepted"
+    | "In Progress"
+    | "Completed"
+    | "Dismissed";
   priority_score: number;
   impacted_appointment_count: number;
   appointment_ids: string[];
@@ -226,6 +242,100 @@ export interface AiMission {
   generated_at: string;
   recommended_actions: string[];
   source_alert_ids: string[];
+  projected_sla_misses_before?: number;
+  projected_sla_misses_after?: number;
+  appointments_recovered?: number;
+  resource_shortages?: string[];
+  scenario_constraints?: OptimizationScenarioConstraints;
+  resource_capacity?: {
+    source?: string;
+    hourly?: Array<{
+      hour: string;
+      loaders_available: number;
+      forklifts_available: number;
+      staging_available: number;
+      loader_headroom: number;
+      forklift_headroom: number;
+      staging_headroom: number;
+    }>;
+  };
+  dock_feasibility?: {
+    active_docks: number;
+    dock_moves: number;
+    temperature_compatibility_enforced: boolean;
+  };
+}
+
+export interface OptimizationScenarioConstraints {
+  max_extra_loaders_per_hour: number | null;
+  max_extra_forklifts_per_hour: number | null;
+  max_staging_labor_per_hour: number | null;
+  allow_dock_reassignment: boolean;
+}
+
+export interface OptimizationMissionScenarioRequest {
+  facility_id: string;
+  customer_id?: string;
+  carrier_id?: string;
+  appointment_type?: "Inbound" | "Outbound";
+  date_from: string;
+  date_to: string;
+  max_missions: number;
+  max_extra_loaders_per_hour: number | null;
+  max_extra_forklifts_per_hour: number | null;
+  max_staging_labor_per_hour: number | null;
+  allow_dock_reassignment: boolean;
+}
+
+export interface OptimizationMissionScenarioResponse {
+  optimizer_version: string;
+  window_start: string;
+  window_end: string;
+  candidate_appointments: number;
+  facility_count: number;
+  scenario_constraints: OptimizationScenarioConstraints;
+  missions: AiMission[];
+}
+
+export interface OptimizationMissionExecution {
+  mission_id: string | number;
+  database_mission_id?: number;
+  facility_id: string;
+  status:
+    | "Proposed"
+    | "Accepted"
+    | "In Progress"
+    | "Completed"
+    | "Dismissed";
+  accepted_at?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+  projected_sla_misses_before?: number;
+  projected_sla_misses_after?: number;
+  estimated_net_savings?: number;
+  realized_sla_misses?: number | null;
+  realized_minutes_saved?: number | null;
+  realized_net_savings?: number | null;
+  outcome_sample_size?: number;
+  outcome_captured_at?: string | null;
+  appointment_plan?: Array<{
+    appt_id: string;
+    priority_order: number;
+    baseline_risk_score: number;
+    baseline_projected_turn_minutes: number;
+    optimized_projected_turn_minutes: number;
+    sla_recovered: boolean;
+    actual_turn_minutes?: number | null;
+    actual_sla_missed?: boolean | null;
+    realized_minutes_saved?: number | null;
+    realized_net_savings?: number | null;
+    actions: Array<{
+      mission_action_id: number;
+      action_code: string;
+      action_description: string;
+      status: string;
+    }>;
+  }>;
 }
 
 
@@ -390,6 +500,11 @@ export interface DashboardWhatIfRequest {
   extra_forklifts: number;
   pre_stage_products: boolean;
   facility_id?: string;
+  customer_id?: string;
+  carrier_id?: string;
+  appointment_type?: "Inbound" | "Outbound";
+  date_from?: string;
+  date_to?: string;
   booking_draft?: GlobalCopilotBookingDraft | null;
 }
 
@@ -411,10 +526,19 @@ export interface DashboardWhatIfScenario extends DashboardWhatIfMetrics {
 export interface DashboardWhatIfResponse {
   active: boolean;
   inputs: DashboardWhatIfRequest;
+  scope: {
+    candidate_appointments: number;
+    operating_window_only: boolean;
+  };
   baseline: DashboardWhatIfMetrics;
   scenario: DashboardWhatIfScenario;
   assumptions: string[];
-  dashboard: DashboardResponse;
+  dashboard_patch: {
+    summary: Partial<DashboardSummary>;
+    late_appointment_outcomes: LateAppointmentOutcome[];
+    risk_distribution: RiskDistributionItem[];
+    recommendation_savings: RecommendationSavings;
+  };
 }
 
 export type GlobalCopilotActionType =
@@ -493,4 +617,59 @@ export interface GlobalCopilotResponse {
   suggested_questions: string[];
   quick_actions: GlobalCopilotQuickAction[];
   action_intent: GlobalCopilotActionIntent | null;
+}
+
+
+export interface MLMonitoringFeatureDrift {
+  feature: string;
+  recent_mean: number;
+  prior_mean: number;
+  standardized_shift: number;
+  status: "Stable" | "Watch" | "High";
+}
+
+export interface MLFacilityPerformance {
+  facility_id: string;
+  facility_name: string;
+  sample_size: number;
+  duration_mae: number | null;
+  sla_precision: number | null;
+  sla_recall: number | null;
+}
+
+export interface MLMonitoringData {
+  model_version: string;
+  window_start: string;
+  window_end: string;
+  window_days: number;
+  facility_id?: string | null;
+  health_status: "Healthy" | "Watch" | "Retrain Recommended";
+  retrain_recommended: boolean;
+  reasons: string[];
+  performance: {
+    sample_size: number;
+    duration_mae: number | null;
+    duration_rmse: number | null;
+    arrival_mae: number | null;
+    true_positive: number;
+    false_positive: number;
+    false_negative: number;
+    true_negative: number;
+    sla_precision: number | null;
+    sla_recall: number | null;
+    sla_f2: number | null;
+  };
+  feature_drift: {
+    score: number;
+    features: MLMonitoringFeatureDrift[];
+  };
+  optimizer_effectiveness: {
+    mission_count: number;
+    appointment_sample_size: number;
+    savings_error_percent: number | null;
+    avg_realized_net_savings: number | null;
+    avg_projected_net_savings: number | null;
+  };
+  facility_performance: MLFacilityPerformance[];
+  governance_thresholds: Record<string, number>;
 }

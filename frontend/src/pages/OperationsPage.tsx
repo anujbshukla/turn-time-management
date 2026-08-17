@@ -29,6 +29,7 @@ import { KpiCard } from "../components/KpiCard";
 import { LiveWhatIfDashboard } from "../components/LiveWhatIfDashboard";
 import { OperationalAlertsPanel } from "../components/OperationalAlertsPanel";
 import { PredictionCenter } from "../components/PredictionCenter/PredictionCenter";
+import { MLModelHealth } from "../components/MLModelHealth";
 import { RecommendationSavings } from "../components/RecommendationSavings";
 import { SectionHeading } from "../components/SectionHeading";
 
@@ -347,7 +348,24 @@ export function OperationsPage({
   ]);
 
   const displayedDashboard =
-    dashboardSimulation?.dashboard ?? dashboard;
+    dashboard && dashboardSimulation
+      ? {
+          ...dashboard,
+          summary: {
+            ...dashboard.summary,
+            ...dashboardSimulation.dashboard_patch.summary,
+          },
+          late_appointment_outcomes:
+            dashboardSimulation.dashboard_patch
+              .late_appointment_outcomes,
+          risk_distribution:
+            dashboardSimulation.dashboard_patch
+              .risk_distribution,
+          recommendation_savings:
+            dashboardSimulation.dashboard_patch
+              .recommendation_savings,
+        }
+      : dashboard;
 
   function openTabAndScroll(
     tab: OperationsTab,
@@ -523,6 +541,12 @@ export function OperationsPage({
                   extra_loaders: 1,
                   extra_forklifts: 1,
                   pre_stage_products: false,
+                  facility_id: facilityId,
+                  customer_id: globalFilters.customerId,
+                  carrier_id: globalFilters.carrierId,
+                  appointment_type: globalFilters.appointmentType,
+                  date_from: activeDateRange.dateFrom,
+                  date_to: activeDateRange.dateTo,
                 });
                 openTabAndScroll("predictions", ".live-what-if-panel");
               }}
@@ -916,6 +940,18 @@ export function OperationsPage({
               </CollapsibleDashboardSection>
 
               <CollapsibleDashboardSection
+                eyebrow="ML governance"
+                title="ML Model Health & Retraining"
+                description="Monitor production accuracy, data drift, optimizer effectiveness and retraining signals."
+                status="Production monitoring"
+                summary="Accuracy · drift · retraining governance"
+              >
+                <MLModelHealth
+                  facilityId={facilityId}
+                />
+              </CollapsibleDashboardSection>
+
+              <CollapsibleDashboardSection
                 eyebrow="Scenario intelligence"
                 title="Live What-If Simulation"
                 description="Test labor, equipment and product-staging changes before execution. Simulation state is preserved while this panel is closed."
@@ -931,7 +967,15 @@ export function OperationsPage({
                   loading={dashboardSimulationLoading}
                   error={dashboardSimulationError}
                   onRun={(request) => {
-                    void runDashboardSimulation(request);
+                    void runDashboardSimulation({
+                      ...request,
+                      facility_id: facilityId,
+                      customer_id: globalFilters.customerId,
+                      carrier_id: globalFilters.carrierId,
+                      appointment_type: globalFilters.appointmentType,
+                      date_from: activeDateRange.dateFrom,
+                      date_to: activeDateRange.dateTo,
+                    });
                   }}
                   onReset={resetDashboardSimulation}
                 />

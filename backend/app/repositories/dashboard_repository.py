@@ -647,40 +647,231 @@ class DashboardRepository:
         self,
         facility_id: str | None = None,
     ) -> dict[str, Any]:
+        """Return live projected recommendation economics.
+
+        The default card must remain useful before operators accept actions.
+        Therefore the primary comparison is based on current ML-predicted
+        detention exposure and the model's recovery probability. Accepted and
+        completed recommendation value is returned separately for transparency.
+        """
         row = self.db.execute(
             text(
                 """
+                WITH latest_predictions AS (
+                    SELECT DISTINCT ON (prediction.appt_id)
+                        prediction.appt_id,
+                        prediction.predicted_delay_minutes,
+                        prediction.predicted_duration_minutes,
+                        prediction.sla_recovery_probability
+                    FROM appointment_predictions prediction
+                    ORDER BY
+                        prediction.appt_id,
+                        prediction.generated_at DESC,
+                        prediction.prediction_id DESC
+                ),
+                latest_recommendations AS (
+                    SELECT DISTINCT ON (recommendation.appt_id)
+                        recommendation.appt_id,
+                        recommendation.status,
+                        recommendation.estimated_cost_of_action,
+                        recommendation.estimated_savings
+                    FROM appointment_recommendations recommendation
+                    WHERE recommendation.status <> 'Superseded'
+                    ORDER BY
+                        recommendation.appt_id,
+                        recommendation.created_at DESC,
+                        recommendation.recommendation_id DESC
+                ),
+                economics AS (
+                    SELECT
+                        appointment.appt_id,
+                        recommendation.status AS recommendation_status,
+                        COALESCE(
+                            recommendation.estimated_cost_of_action,
+                            0
+                        )::NUMERIC AS recommendation_action_cost,
+                        COALESCE(
+                            recommendation.estimated_savings,
+                            0
+                        )::NUMERIC AS recommendation_estimated_savings,
+
+                        GREATEST(
+                            (
+                                COALESCE(
+                                    prediction.predicted_delay_minutes,
+                                    0
+                                )
+                                + COALESCE(
+                                    prediction.predicted_duration_minutes,
+                                    0
+                                )
+                                - appointment.sla_minutes
+                            ),
+                            0
+                        )
+                        / 60.0
+                        * appointment.detention_cost_per_hour
+                        AS predicted_exposure,
+
+                        LEAST(
+                            1.0,
+                            GREATEST(
+                                0.0,
+                                COALESCE(
+                                    prediction.sla_recovery_probability,
+                                    0
+                                )
+                            )
+                        ) AS recovery_probability
+
+                    FROM appointments appointment
+                    LEFT JOIN latest_predictions prediction
+                      ON prediction.appt_id = appointment.appt_id
+                    LEFT JOIN latest_recommendations recommendation
+                      ON recommendation.appt_id = appointment.appt_id
+                    WHERE appointment.appt_id LIKE 'DEMO%'
+                      AND (
+                          CAST(:facility_id AS VARCHAR) IS NULL
+                          OR appointment.facility_id =
+                             CAST(:facility_id AS VARCHAR)
+                      )
+                      AND appointment.status NOT IN (
+                          'Completed',
+                          'Cancelled'
+                      )
+                )
                 SELECT
-                    ROUND(COALESCE(SUM(ar.estimated_loss_without_action), 0), 2) AS without_recommendations,
-                    ROUND(COALESCE(SUM(
-                        CASE WHEN ar.status IN ('Accepted', 'Completed')
-                        THEN GREATEST(ar.estimated_loss_without_action - ar.estimated_savings, 0)
-                        ELSE ar.estimated_loss_without_action END
-                    ), 0), 2) AS detention_with_recommendations,
-                    ROUND(COALESCE(SUM(
-                        CASE WHEN ar.status IN ('Accepted', 'Completed')
-                        THEN ar.estimated_cost_of_action ELSE 0 END
-                    ), 0), 2) AS action_cost,
-                    ROUND(COALESCE(SUM(
-                        CASE WHEN ar.status IN ('Accepted', 'Completed')
-                        THEN ar.estimated_savings ELSE 0 END
-                    ), 0), 2) AS gross_savings
-                FROM appointment_recommendations ar
-                JOIN appointments a ON a.appt_id = ar.appt_id
-                WHERE a.appt_id LIKE 'DEMO%'
-                  AND (CAST(:facility_id AS VARCHAR) IS NULL OR a.facility_id = CAST(:facility_id AS VARCHAR));
+                    ROUND(
+                        COALESCE(
+                            SUM(predicted_exposure),
+                            0
+                        ),
+                        2
+                    ) AS without_recommendations,
+
+                    ROUND(
+                        COALESCE(
+                            SUM(
+                                predicted_exposure
+                                * recovery_probability
+                            ),
+                            0
+                        ),
+                        2
+                    ) AS projected_gross_savings,
+
+                    ROUND(
+                        COALESCE(
+                            SUM(
+                                CASE
+                                    WHEN recommendation_status
+                                         IN ('Pending', 'Accepted')
+                                    THEN recommendation_action_cost
+                                    ELSE 0
+                                END
+                            ),
+                            0
+                        ),
+                        2
+                    ) AS projected_action_cost,
+
+                    ROUND(
+                        COALESCE(
+                            SUM(
+                                CASE
+                                    WHEN recommendation_status
+                                         IN ('Accepted', 'Completed')
+                                    THEN recommendation_estimated_savings
+                                    ELSE 0
+                                END
+                            ),
+                            0
+                        ),
+                        2
+                    ) AS accepted_gross_savings,
+
+                    ROUND(
+                        COALESCE(
+                            SUM(
+                                CASE
+                                    WHEN recommendation_status = 'Completed'
+                                    THEN recommendation_estimated_savings
+                                    ELSE 0
+                                END
+                            ),
+                            0
+                        ),
+                        2
+                    ) AS realized_gross_savings,
+
+                    COUNT(*) FILTER (
+                        WHERE predicted_exposure > 0
+                    ) AS opportunity_appointments
+
+                FROM economics;
                 """
             ),
             {"facility_id": facility_id},
         ).mappings().one()
+
         result = dict(row)
-        net = float(result.get("gross_savings") or 0) - float(result.get("action_cost") or 0)
-        result["net_savings"] = round(net, 2)
-        result["with_recommendations"] = round(float(result.get("detention_with_recommendations") or 0) + float(result.get("action_cost") or 0), 2)
-        result["roi"] = round(net / float(result.get("action_cost") or 0), 2) if float(result.get("action_cost") or 0) > 0 else 0.0
-        without = float(result.get("without_recommendations") or 0)
-        result["cost_reduction_percent"] = round(net / without * 100, 1) if without > 0 else 0.0
+
+        without = float(
+            result.get("without_recommendations") or 0
+        )
+        gross = float(
+            result.get("projected_gross_savings") or 0
+        )
+        action_cost = float(
+            result.get("projected_action_cost") or 0
+        )
+
+        # If no structured action exists yet, keep the default card useful by
+        # displaying the ML-estimated recovery opportunity. Action cost remains
+        # zero until a plan has actually been generated.
+        gross = min(without, max(0.0, gross))
+        detention_with = max(
+            0.0,
+            without - gross,
+        )
+        with_recommendations = (
+            detention_with + action_cost
+        )
+        net = gross - action_cost
+
+        result.update(
+            {
+                "detention_with_recommendations":
+                    round(detention_with, 2),
+                "action_cost":
+                    round(action_cost, 2),
+                "gross_savings":
+                    round(gross, 2),
+                "net_savings":
+                    round(net, 2),
+                "with_recommendations":
+                    round(with_recommendations, 2),
+                "roi":
+                    round(
+                        net / action_cost,
+                        2,
+                    )
+                    if action_cost > 0
+                    else 0.0,
+                "cost_reduction_percent":
+                    round(
+                        max(0.0, net)
+                        / without
+                        * 100,
+                        1,
+                    )
+                    if without > 0
+                    else 0.0,
+                "value_basis": "projected_ml_opportunity",
+            }
+        )
         return result
+
 
     def get_high_risk_appointments(
         self,
@@ -690,58 +881,92 @@ class DashboardRepository:
         rows = self.db.execute(
             text(
                 """
+                WITH latest_predictions AS (
+                    SELECT DISTINCT ON (prediction.appt_id)
+                        prediction.appt_id,
+                        prediction.predicted_arrival_time,
+                        prediction.predicted_delay_minutes,
+                        prediction.predicted_duration_minutes,
+                        prediction.sla_miss_probability,
+                        prediction.sla_recovery_probability,
+                        prediction.turn_risk_score,
+                        prediction.predicted_missed,
+                        prediction.model_version
+                    FROM appointment_predictions prediction
+                    ORDER BY
+                        prediction.appt_id,
+                        prediction.generated_at DESC,
+                        prediction.prediction_id DESC
+                )
                 SELECT
-                    a.appt_id,
-                    a.customer_name,
-                    f.facility_name,
-                    c.carrier_name,
-                    d.dock_name,
-                    a.status,
-                    a.scheduled_time,
-                    a.estimated_arrival_time,
-                    a.actual_arrival_delay_minutes,
-                    a.pallet_count,
-                    a.sku_count,
-                    p.predicted_duration_minutes,
-                    p.turn_risk_score,
-                    p.sla_recovery_probability,
-                    p.predicted_missed,
+                    appointment.appt_id,
+                    appointment.customer_name,
+                    facility.facility_name,
+                    carrier.carrier_name,
+                    dock.dock_name,
+                    appointment.status,
+                    appointment.scheduled_time,
+                    appointment.estimated_arrival_time,
+                    appointment.actual_arrival_delay_minutes,
+                    appointment.pallet_count,
+                    appointment.sku_count,
 
-                    r.recommended_action,
-                    r.estimated_savings
+                    prediction.predicted_arrival_time,
+                    prediction.predicted_delay_minutes,
+                    prediction.predicted_duration_minutes,
+                    prediction.sla_miss_probability,
+                    prediction.turn_risk_score,
+                    prediction.sla_recovery_probability,
+                    prediction.predicted_missed,
+                    prediction.model_version,
 
-                FROM appointments a
+                    recommendation.recommended_action,
+                    recommendation.estimated_savings
 
-                JOIN facilities f
-                    ON f.facility_id = a.facility_id
+                FROM appointments appointment
 
-                LEFT JOIN carriers c
-                    ON c.carrier_id = a.carrier_id
+                JOIN facilities facility
+                  ON facility.facility_id =
+                     appointment.facility_id
 
-                LEFT JOIN docks d
-                    ON d.dock_id = a.assigned_dock_id
+                LEFT JOIN carriers carrier
+                  ON carrier.carrier_id =
+                     appointment.carrier_id
 
-                JOIN appointment_predictions p
-                    ON p.appt_id = a.appt_id
+                LEFT JOIN docks dock
+                  ON dock.dock_id =
+                     appointment.assigned_dock_id
+
+                JOIN latest_predictions prediction
+                  ON prediction.appt_id =
+                     appointment.appt_id
 
                 LEFT JOIN LATERAL (
                     SELECT
                         recommended_action,
                         estimated_savings
                     FROM appointment_recommendations
-                    WHERE appt_id = a.appt_id
+                    WHERE appt_id = appointment.appt_id
                     ORDER BY created_at DESC
                     LIMIT 1
-                ) r ON TRUE
+                ) recommendation ON TRUE
 
-                WHERE a.appt_id LIKE 'DEMO%'
-                  AND p.turn_risk_score >= 65
+                WHERE appointment.appt_id LIKE 'DEMO%'
+                  AND appointment.status NOT IN (
+                      'Completed',
+                      'Cancelled'
+                  )
+                  AND prediction.turn_risk_score >= 60
                   AND (
                       CAST(:facility_id AS VARCHAR) IS NULL
-                      OR a.facility_id = CAST(:facility_id AS VARCHAR)
+                      OR appointment.facility_id =
+                         CAST(:facility_id AS VARCHAR)
                   )
 
-                ORDER BY p.turn_risk_score DESC
+                ORDER BY
+                    prediction.turn_risk_score DESC,
+                    prediction.sla_miss_probability DESC,
+                    appointment.scheduled_time
                 LIMIT :limit;
                 """
             ),
@@ -752,20 +977,79 @@ class DashboardRepository:
         ).mappings().all()
 
         return [dict(row) for row in rows]
+
     def get_what_if_candidates(
         self,
         facility_id: str | None = None,
+        *,
+        customer_id: str | None = None,
+        carrier_id: str | None = None,
+        appointment_type: str | None = None,
+        date_from=None,
+        date_to=None,
     ) -> list[dict[str, Any]]:
-        """Return prediction-level data used by the dashboard simulation.
+        """Return only the active operating-window rows used by What-If.
 
-        The query is read-only and deliberately returns one latest prediction
-        per demo appointment. The simulation service owns all scenario math.
+        This intentionally queries public.appointments because the What-If
+        endpoint is independent from the request-local temp table used by the
+        GET dashboard endpoint.
         """
+        conditions = [
+            "appointment.appt_id LIKE 'DEMO%'",
+            "appointment.status NOT IN ('Completed', 'Cancelled')",
+        ]
+        parameters: dict[str, Any] = {}
+
+        if facility_id:
+            conditions.append(
+                "appointment.facility_id = :facility_id"
+            )
+            parameters["facility_id"] = facility_id
+
+        if customer_id:
+            conditions.append(
+                "appointment.customer_id = :customer_id"
+            )
+            parameters["customer_id"] = customer_id
+
+        if carrier_id:
+            conditions.append(
+                "appointment.carrier_id = :carrier_id"
+            )
+            parameters["carrier_id"] = carrier_id
+
+        if appointment_type:
+            conditions.append(
+                "LOWER(appointment.appointment_type) = "
+                "LOWER(:appointment_type)"
+            )
+            parameters["appointment_type"] = (
+                appointment_type
+            )
+
+        if date_from:
+            conditions.append(
+                "appointment.scheduled_time >= :date_from"
+            )
+            parameters["date_from"] = date_from
+
+        if date_to:
+            conditions.append(
+                "appointment.scheduled_time < :date_to"
+            )
+            parameters["date_to"] = date_to
+
+        where_clause = "\n                  AND ".join(
+            conditions
+        )
+
         rows = self.db.execute(
             text(
-                """
+                f"""
                 WITH latest_predictions AS (
-                    SELECT DISTINCT ON (prediction.appt_id)
+                    SELECT DISTINCT ON (
+                        prediction.appt_id
+                    )
                         prediction.appt_id,
                         prediction.predicted_delay_minutes,
                         prediction.predicted_duration_minutes,
@@ -774,11 +1058,13 @@ class DashboardRepository:
                     FROM appointment_predictions prediction
                     ORDER BY
                         prediction.appt_id,
+                        prediction.generated_at DESC,
                         prediction.prediction_id DESC
                 )
                 SELECT
                     appointment.appt_id,
                     appointment.status,
+                    appointment.scheduled_time,
                     appointment.actual_arrival_delay_minutes,
                     appointment.actual_sla_missed,
                     appointment.sla_minutes,
@@ -790,20 +1076,19 @@ class DashboardRepository:
                     prediction.predicted_duration_minutes,
                     prediction.sla_miss_probability,
                     prediction.turn_risk_score
-                FROM appointments appointment
+                FROM public.appointments appointment
                 JOIN latest_predictions prediction
-                    ON prediction.appt_id = appointment.appt_id
-                WHERE appointment.appt_id LIKE 'DEMO%'
-                  AND (
-                      CAST(:facility_id AS VARCHAR) IS NULL
-                      OR appointment.facility_id = CAST(:facility_id AS VARCHAR)
-                  )
+                  ON prediction.appt_id =
+                     appointment.appt_id
+                WHERE {where_clause}
                 ORDER BY
                     prediction.turn_risk_score DESC,
+                    prediction.sla_miss_probability DESC,
                     appointment.scheduled_time;
                 """
             ),
-            {"facility_id": facility_id},
+            parameters,
         ).mappings().all()
 
         return [dict(row) for row in rows]
+

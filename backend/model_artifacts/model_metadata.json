@@ -1,19 +1,35 @@
 {
-  "model_version": "warehouse-ml-v1-202608040132",
-  "trained_at": "2026-08-04T01:32:09.854753+00:00",
-  "data_scope": "synthetic warehouse appointments; pre-arrival features",
+  "model_version": "warehouse-ml-v2-202608141601",
+  "trained_at": "2026-08-14T16:01:51.380861+00:00",
+  "data_scope": "ML Dataset v2.0; chronological warehouse history; pre-arrival/planning features only",
   "algorithm": {
-    "turn_time": "HistGradientBoostingRegressor",
+    "arrival_delay": "HistGradientBoostingRegressor",
+    "turn_duration": "HistGradientBoostingRegressor",
     "sla_miss": "HistGradientBoostingClassifier"
   },
   "rows": {
-    "total": 500000,
-    "train": 350000,
-    "validation": 75000,
-    "test": 75000
+    "total": 146975,
+    "train": 102882,
+    "validation": 22046,
+    "test": 22047
+  },
+  "date_ranges": {
+    "train": [
+      "2025-08-14 03:30:00",
+      "2026-05-03 03:56:00"
+    ],
+    "validation": [
+      "2026-05-03 04:08:00",
+      "2026-06-23 09:41:00"
+    ],
+    "test": [
+      "2026-06-23 09:42:00",
+      "2026-08-14 07:59:00"
+    ]
   },
   "targets": {
-    "turn_time": "actual_turn_time_minutes",
+    "arrival_delay": "actual_arrival_delay_minutes",
+    "turn_duration": "actual_loading_duration_minutes",
     "sla_miss": "actual_sla_missed"
   },
   "features": [
@@ -38,58 +54,139 @@
     "scheduled_hour",
     "scheduled_day_of_week",
     "scheduled_month",
-    "is_weekend"
+    "is_weekend",
+    "planned_loaders",
+    "planned_forklifts",
+    "planned_staging_labor",
+    "queue_depth_at_arrival",
+    "dock_congestion_percent",
+    "labor_utilization_percent",
+    "forklift_utilization_percent",
+    "facility_weekday_base_volume",
+    "facility_weekend_volume_factor",
+    "facility_dock_efficiency_factor",
+    "facility_labor_efficiency_factor",
+    "facility_congestion_sensitivity",
+    "facility_base_loader_capacity",
+    "facility_base_forklift_capacity",
+    "carrier_baseline_on_time_rate",
+    "carrier_mean_delay_minutes",
+    "carrier_delay_stddev_minutes",
+    "carrier_long_haul_penalty_minutes",
+    "customer_handling_complexity_factor",
+    "customer_typical_pallets",
+    "customer_typical_skus",
+    "customer_inbound_share",
+    "customer_priority_bias",
+    "product_hist_minutes_per_pallet",
+    "product_hist_sla_success_rate",
+    "product_hist_avg_loaders",
+    "product_hist_avg_forklifts",
+    "product_complexity_factor",
+    "product_forklift_intensity",
+    "product_staging_intensity"
   ],
+  "sla_decision_threshold": 0.8455,
+  "threshold_selection": {
+    "threshold": 0.8455,
+    "validation_f2": 0.7092,
+    "validation_precision": 0.4621,
+    "validation_recall": 0.8187
+  },
   "metrics": {
-    "turn_time": {
-      "mae": 19.592,
-      "rmse": 23.923,
-      "r2": 0.553,
-      "within_15_minutes_percent": 43.8
+    "arrival_delay": {
+      "mae": 5.521,
+      "median_absolute_error": 4.511,
+      "rmse": 7.076,
+      "r2": 0.6337,
+      "within_5_minutes_percent": 54.42,
+      "within_10_minutes_percent": 85.32,
+      "within_15_minutes_percent": 96.27
+    },
+    "turn_duration": {
+      "mae": 6.427,
+      "median_absolute_error": 5.339,
+      "rmse": 8.305,
+      "r2": 0.7502,
+      "within_10_minutes_percent": 79.64,
+      "within_15_minutes_percent": 93.88,
+      "within_20_minutes_percent": 98.11
     },
     "sla_miss": {
-      "roc_auc": 0.9215,
-      "pr_auc": 0.9697,
+      "roc_auc": 0.9816,
+      "pr_auc": 0.6178,
+      "brier_score": 0.0441,
+      "threshold": 0.8455,
+      "f2": 0.6674,
       "confusion_matrix": [
         [
-          14158,
-          6351
+          21083,
+          489
         ],
         [
-          4587,
-          49904
+          107,
+          368
         ]
       ],
       "classification_report": {
         "0": {
-          "precision": 0.7552947452654041,
-          "recall": 0.6903310741625628,
-          "f1-score": 0.7213532378865848,
-          "support": 20509.0
+          "precision": 0.9949504483246815,
+          "recall": 0.9773317263118858,
+          "f1-score": 0.9860623918432253,
+          "support": 21572.0
         },
         "1": {
-          "precision": 0.8871033685894587,
-          "recall": 0.9158209612596575,
-          "f1-score": 0.9012334531269752,
-          "support": 54491.0
+          "precision": 0.4294049008168028,
+          "recall": 0.7747368421052632,
+          "f1-score": 0.5525525525525525,
+          "support": 475.0
         },
-        "accuracy": 0.85416,
+        "accuracy": 0.9729668435614823,
         "macro avg": {
-          "precision": 0.8211990569274314,
-          "recall": 0.8030760177111101,
-          "f1-score": 0.81129334550678,
-          "support": 75000.0
+          "precision": 0.7121776745707422,
+          "recall": 0.8760342842085744,
+          "f1-score": 0.769307472197889,
+          "support": 22047.0
         },
         "weighted avg": {
-          "precision": 0.8510598611794182,
-          "recall": 0.85416,
-          "f1-score": 0.8520446086687731,
-          "support": 75000.0
+          "precision": 0.9827658365831184,
+          "recall": 0.9729668435614823,
+          "f1-score": 0.9767224737744147,
+          "support": 22047.0
         }
       }
     }
   },
+  "baselines": {
+    "arrival_eta": {
+      "mae": 7.983,
+      "median_absolute_error": 7.0,
+      "rmse": 10.02,
+      "r2": 0.2655,
+      "within_5_minutes_percent": 41.56,
+      "within_10_minutes_percent": 70.64,
+      "within_15_minutes_percent": 87.69
+    },
+    "turn_duration_train_median": {
+      "median_minutes": 55.0,
+      "mae": 13.11,
+      "median_absolute_error": 11.0,
+      "rmse": 16.675,
+      "r2": -0.0072,
+      "within_10_minutes_percent": 48.62,
+      "within_15_minutes_percent": 65.89,
+      "within_20_minutes_percent": 78.7
+    },
+    "sla_test_prevalence_percent": 2.154
+  },
   "class_balance": {
-    "sla_miss_rate_percent": 72.6
+    "overall_sla_miss_rate_percent": 1.939
+  },
+  "promotion_checks": {
+    "arrival_beats_eta_mae": true,
+    "duration_beats_median_mae": true,
+    "sla_pr_auc_above_prevalence_3x": true,
+    "sla_positive_recall_at_least_70_percent": true,
+    "recommended_for_promotion": true
   }
 }

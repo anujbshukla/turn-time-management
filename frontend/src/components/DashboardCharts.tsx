@@ -12,6 +12,7 @@ import {
     XAxis,
     YAxis,
 } from "recharts";
+import type { XAxisTickContentProps } from "recharts";
 
 import type { LateAppointmentOutcome, RiskDistributionItem } from "../types/dashboard";
 
@@ -32,15 +33,76 @@ const RISK_COLORS: Record<string, string> = {
 };
 
 
-function renderOutcomeTick({
-    x = 0,
-    y = 0,
-    payload,
+function renderRiskLabel({
+    cx = 0,
+    cy = 0,
+    midAngle = 0,
+    outerRadius = 0,
+    name,
+    value,
+    totalRisk,
 }: {
-    x?: number;
-    y?: number;
-    payload?: { value?: string };
+    cx?: number;
+    cy?: number;
+    midAngle?: number;
+    outerRadius?: number;
+    name?: string;
+    value?: number;
+    totalRisk: number;
 }) {
+    const count = Number(value ?? 0);
+    const percent =
+        totalRisk > 0
+            ? Math.round((count / totalRisk) * 100)
+            : 0;
+
+    const riskLevel = String(name ?? "");
+    const radius = outerRadius + 26;
+    const radians = -midAngle * (Math.PI / 180);
+
+    let x = cx + radius * Math.cos(radians);
+    let y = cy + radius * Math.sin(radians);
+
+    /*
+     * Small adjacent slices on the right side can place their
+     * labels at nearly the same Y coordinate. Give each risk
+     * level a stable vertical lane so Critical/High/Medium
+     * remain readable even when one of the values is zero.
+     */
+    const rightSideOffsets: Record<string, number> = {
+        Critical: -22,
+        High: -4,
+        Medium: 20,
+    };
+
+    if (x >= cx && riskLevel in rightSideOffsets) {
+        y += rightSideOffsets[riskLevel];
+        x += 6;
+    }
+
+    const textAnchor = x >= cx ? "start" : "end";
+
+    return (
+        <text
+            x={x}
+            y={y}
+            fill={RISK_COLORS[riskLevel] ?? "#667286"}
+            textAnchor={textAnchor}
+            dominantBaseline="central"
+            fontSize={11}
+        >
+            {`${riskLevel}: ${count} (${percent}%)`}
+        </text>
+    );
+}
+
+
+function renderOutcomeTick(props: XAxisTickContentProps) {
+    const x = Number(props.x ?? 0);
+    const y = Number(props.y ?? 0);
+    const payload = props.payload as
+        | { value?: unknown }
+        | undefined;
     const value = String(payload?.value ?? "");
     const lines =
         value === "Recovered with recommendations"
@@ -116,11 +178,12 @@ export function DashboardCharts(props: DashboardChartsProps) {
                                 cursor="pointer"
                                 onClick={handleRiskClick}
                                 labelLine={false}
-                                label={({ name, value }) => {
-                                    const count = Number(value ?? 0);
-                                    const percent = totalRisk > 0 ? Math.round((count / totalRisk) * 100) : 0;
-                                    return `${name}: ${count} (${percent}%)`;
-                                }}
+                                label={(props) =>
+                                    renderRiskLabel({
+                                        ...props,
+                                        totalRisk,
+                                    })
+                                }
                             >
                                 {props.riskDistribution.map((item) => <Cell key={item.risk_level} fill={props.selectedRiskLevel === item.risk_level ? "#172033" : RISK_COLORS[item.risk_level] ?? "#7b8597"} />)}
                             </Pie>

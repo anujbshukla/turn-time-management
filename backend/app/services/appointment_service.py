@@ -14,7 +14,7 @@ from app.repositories.appointment_repository import (
     AppointmentRepository,
 )
 from app.schemas import AppointmentCreate, AppointmentUpdate
-from app.ml.model_service import WarehouseModelService
+from app.services.prediction_orchestration_service import PredictionOrchestrationService
 
 
 def normalize_database_value(
@@ -66,6 +66,36 @@ class AppointmentService:
 
         engine = WhatIfEngine()
 
+        scenario_prediction = None
+        try:
+            scenario_prediction = (
+                PredictionOrchestrationService(
+                    self.repository.db,
+                    self.repository,
+                ).predict_scenario(
+                    appt_id=appt_id,
+                    actions=details[
+                        "recommendation_actions"
+                    ],
+                    selected_action_ids=(
+                        payload.selected_action_ids
+                    ),
+                    extra_loaders=(
+                        payload.extra_loaders
+                    ),
+                    extra_forklifts=(
+                        payload.extra_forklifts
+                    ),
+                    pre_stage_products=(
+                        payload.pre_stage_products
+                    ),
+                )
+            )
+        except Exception:
+            # Keep What-If available if artifacts are temporarily
+            # unavailable; the engine retains its deterministic fallback.
+            scenario_prediction = None
+
         try:
             result = engine.simulate(
                 appointment=details["appointment"],
@@ -82,6 +112,9 @@ class AppointmentService:
                 ),
                 pre_stage_products=(
                     payload.pre_stage_products
+                ),
+                scenario_prediction=(
+                    scenario_prediction
                 ),
             )
         except ValueError as exc:
@@ -359,67 +392,55 @@ class AppointmentService:
 
         prediction = None
         scoring_status = "model_unavailable"
-        message = "Appointment updated. ML model artifacts are unavailable, so rescoring was skipped."
+        message = (
+            "Appointment updated. ML-v2 artifacts are unavailable, "
+            "so rescoring was skipped."
+        )
+
         try:
-            artifact_dir = Path(__file__).resolve().parents[2] / "model_artifacts"
-            model_service = WarehouseModelService(artifact_dir)
-            if model_service.is_ready:
-                scoring_row = self.repository.get_scoring_row(appt_id)
-                if scoring_row:
-                    scored = model_service.predict(pd.DataFrame([scoring_row])).iloc[0].to_dict()
-                    prediction = {
-                        "appt_id": appt_id,
-                        "predicted_arrival_time": None if pd.isna(scored.get("estimated_arrival_time")) else scored.get("estimated_arrival_time"),
-                        "predicted_delay_minutes": int(scored["predicted_delay_minutes"]),
-                        "predicted_duration_minutes": int(scored["predicted_duration_minutes"]),
-                        "sla_miss_probability": round(float(scored["sla_miss_probability"]), 4),
-                        "sla_recovery_probability": round(float(scored["sla_recovery_probability"]), 4),
-                        "turn_risk_score": int(scored["turn_risk_score"]),
-                        "predicted_missed": bool(scored["predicted_missed"]),
-                        "model_version": str(scored["model_version"]),
-                    }
-                    self.repository.save_prediction(prediction)
-                    self.repository.create_audit_event(
-                        appt_id=appt_id,
-                        event_type="PREDICTION_UPDATED",
-                        event_time=now,
-                        notes="ML risk prediction recalculated after the appointment update.",
-                        performed_by="Warehouse ML Service",
-                        field_name="turn_risk_score",
-                        old_value=(previous_prediction or {}).get("turn_risk_score"),
-                        new_value=prediction["turn_risk_score"],
-                        details={
-                            "previous_prediction": previous_prediction or {},
-                            "new_prediction": prediction,
-                        },
+            prediction = (
+                PredictionOrchestrationService(
+                    self.repository.db,
+                    self.repository,
+                ).score_and_persist(appt_id)
+            )
+            self.repository.create_audit_event(
+                appt_id=appt_id,
+                event_type="PREDICTION_UPDATED",
+                event_time=now,
+                notes=(
+                    "ML-v2 prediction recalculated after "
+                    "the appointment update."
+                ),
+                performed_by="Warehouse ML-v2 Service",
+                field_name="turn_risk_score",
+                old_value=(
+                    (previous_prediction or {}).get(
+                        "turn_risk_score"
                     )
-                    if prediction["predicted_missed"]:
-                        recommendation_id = self.repository.create_initial_recommendation(
-                            appt_id=appt_id,
-                            dock_id=payload.assigned_dock_id,
-                            predicted_duration_minutes=prediction["predicted_duration_minutes"],
-                            sla_minutes=payload.sla_minutes,
-                            detention_cost_per_hour=payload.detention_cost_per_hour,
-                        )
-                        self.repository.create_audit_event(
-                            appt_id=appt_id,
-                            event_type="RECOMMENDATION_CREATED",
-                            event_time=now,
-                            notes="A refreshed SLA recovery plan was generated.",
-                            performed_by="Recovery Recommendation Engine",
-                            details={
-                                "recommendation_id": recommendation_id,
-                                "predicted_duration_minutes": prediction["predicted_duration_minutes"],
-                                "sla_minutes": payload.sla_minutes,
-                            },
-                        )
-                        message = "Appointment updated, rescored, and supplied with a refreshed AI recovery plan."
-                    else:
-                        message = "Appointment updated and rescored by the active ML models."
-                    scoring_status = "scored"
+                ),
+                new_value=prediction[
+                    "turn_risk_score"
+                ],
+                details={
+                    "previous_prediction":
+                        previous_prediction or {},
+                    "new_prediction": prediction,
+                    "model_version":
+                        prediction["model_version"],
+                },
+            )
+            scoring_status = "scored"
+            message = (
+                "Appointment updated and rescored by "
+                f"{prediction['model_version']}."
+            )
         except Exception:
             scoring_status = "failed"
-            message = "Appointment updated, but ML rescoring failed."
+            message = (
+                "Appointment updated, but ML-v2 "
+                "rescoring failed."
+            )
 
         return normalize_database_value({
             "appt_id": appt_id,
@@ -516,42 +537,48 @@ class AppointmentService:
 
         prediction = None
         scoring_status = "model_unavailable"
-        message = "Appointment created. ML model artifacts are unavailable, so scoring was skipped."
+        message = (
+            "Appointment created. ML-v2 artifacts are unavailable, "
+            "so scoring was skipped."
+        )
 
         try:
-            artifact_dir = Path(__file__).resolve().parents[2] / "model_artifacts"
-            model_service = WarehouseModelService(artifact_dir)
-            if model_service.is_ready:
-                scoring_row = self.repository.get_scoring_row(appt_id)
-                if scoring_row:
-                    scored = model_service.predict(pd.DataFrame([scoring_row])).iloc[0].to_dict()
-                    prediction = {
-                        "appt_id": appt_id,
-                        "predicted_arrival_time": None if pd.isna(scored.get("estimated_arrival_time")) else scored.get("estimated_arrival_time"),
-                        "predicted_delay_minutes": int(scored["predicted_delay_minutes"]),
-                        "predicted_duration_minutes": int(scored["predicted_duration_minutes"]),
-                        "sla_miss_probability": round(float(scored["sla_miss_probability"]), 4),
-                        "sla_recovery_probability": round(float(scored["sla_recovery_probability"]), 4),
-                        "turn_risk_score": int(scored["turn_risk_score"]),
-                        "predicted_missed": bool(scored["predicted_missed"]),
-                        "model_version": str(scored["model_version"]),
-                    }
-                    self.repository.save_prediction(prediction)
-                    if prediction["predicted_missed"]:
-                        self.repository.create_initial_recommendation(
-                            appt_id=appt_id,
-                            dock_id=payload.assigned_dock_id,
-                            predicted_duration_minutes=prediction["predicted_duration_minutes"],
-                            sla_minutes=payload.sla_minutes,
-                            detention_cost_per_hour=payload.detention_cost_per_hour,
-                        )
-                        message = "Appointment created, scored, and supplied with an AI recovery plan."
-                    else:
-                        message = "Appointment created and scored by the active ML models."
-                    scoring_status = "scored"
+            prediction = (
+                PredictionOrchestrationService(
+                    self.repository.db,
+                    self.repository,
+                ).score_and_persist(appt_id)
+            )
+            self.repository.create_audit_event(
+                appt_id=appt_id,
+                event_type="PREDICTION_CREATED",
+                event_time=now,
+                notes=(
+                    "Appointment scored by the production "
+                    "ML-v2 model."
+                ),
+                performed_by="Warehouse ML-v2 Service",
+                field_name="turn_risk_score",
+                new_value=prediction[
+                    "turn_risk_score"
+                ],
+                details={
+                    "prediction": prediction,
+                    "model_version":
+                        prediction["model_version"],
+                },
+            )
+            scoring_status = "scored"
+            message = (
+                "Appointment created and scored by "
+                f"{prediction['model_version']}."
+            )
         except Exception:
             scoring_status = "failed"
-            message = "Appointment was created, but ML scoring failed. It can be rescored from the ML endpoint."
+            message = (
+                "Appointment created, but ML-v2 "
+                "scoring failed."
+            )
 
         return normalize_database_value({
             "appt_id": appt_id,

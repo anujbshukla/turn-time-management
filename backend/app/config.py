@@ -21,6 +21,43 @@ class Settings(BaseSettings):
         "http://127.0.0.1:5174"
     )
 
+    # ---------------------------------------------------------
+    # Global Copilot V2 / semantic provider
+    # ---------------------------------------------------------
+
+    copilot_nl_v2_enabled: bool = False
+
+    copilot_nl_provider: str = "gemini"
+
+    copilot_nl_model: str = "gemini-2.5-flash-lite"
+
+    copilot_nl_base_url: str = (
+        "https://generativelanguage.googleapis.com/v1beta"
+    )
+
+    copilot_nl_timeout_seconds: float = Field(
+        default=45,
+        gt=0,
+    )
+
+    copilot_nl_max_retries: int = Field(
+        default=3,
+        ge=0,
+        le=10,
+    )
+
+    copilot_nl_retry_base_seconds: float = Field(
+        default=2,
+        ge=0,
+    )
+
+    copilot_nl_retry_max_seconds: float = Field(
+        default=15,
+        ge=0,
+    )
+
+    gemini_api_key: str | None = None
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

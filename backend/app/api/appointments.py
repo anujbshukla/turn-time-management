@@ -64,14 +64,41 @@ def get_paginated_appointments(
     facility_id: str | None = Query(
         default=None,
     ),
-    customer_id: str | None = Query(default=None),
-    carrier_id: str | None = Query(default=None),
+    customer_id: str | None = Query(
+        default=None,
+    ),
+    carrier_id: str | None = Query(
+        default=None,
+    ),
+    assigned_dock_id: str | None = Query(
+    default=None,
+    ),
     appointment_type: str | None = Query(
         default=None,
         pattern="^(Inbound|Outbound)$",
     ),
-    date_from: date | None = Query(default=None),
-    date_to: date | None = Query(default=None),
+    date_from: date | None = Query(
+        default=None,
+    ),
+    date_to: date | None = Query(
+        default=None,
+    ),
+    pallet_min: int | None = Query(
+        default=None,
+        ge=0,
+    ),
+    pallet_max: int | None = Query(
+        default=None,
+        ge=0,
+    ),
+    sku_min: int | None = Query(
+        default=None,
+        ge=0,
+    ),
+    sku_max: int | None = Query(
+        default=None,
+        ge=0,
+    ),
     status: str | None = Query(
         default=None,
     ),
@@ -112,9 +139,14 @@ def get_paginated_appointments(
         facility_id=facility_id,
         customer_id=customer_id,
         carrier_id=carrier_id,
+        assigned_dock_id=assigned_dock_id,
         appointment_type=appointment_type,
         date_from=date_from,
         date_to=date_to,
+        pallet_min=pallet_min,
+        pallet_max=pallet_max,
+        sku_min=sku_min,
+        sku_max=sku_max,
         status=status,
         risk_level=risk_level,
         outcome=outcome,

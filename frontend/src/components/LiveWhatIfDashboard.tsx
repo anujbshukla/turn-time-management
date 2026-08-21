@@ -1,16 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { DashboardWhatIfResponse } from "../types/dashboard";
+
+type WhatIfRequest = {
+    extra_loaders: number;
+    extra_forklifts: number;
+    pre_stage_products: boolean;
+};
 
 type Props = {
     simulation: DashboardWhatIfResponse | null;
     loading: boolean;
     error: string | null;
-    onRun: (request: {
-        extra_loaders: number;
-        extra_forklifts: number;
-        pre_stage_products: boolean;
-    }) => void;
+    initialRequest?: WhatIfRequest | null;
+    onRun: (request: WhatIfRequest) => void;
     onReset: () => void;
 };
 
@@ -78,13 +81,22 @@ export function LiveWhatIfDashboard({
     simulation,
     loading,
     error,
+    initialRequest,
     onRun,
     onReset,
 }: Props) {
     const [extraLoaders, setExtraLoaders] = useState(0);
     const [extraForklifts, setExtraForklifts] = useState(0);
     const [preStageProducts, setPreStageProducts] = useState(false);
+    useEffect(() => {
+        if (!initialRequest) {
+            return;
+        }
 
+        setExtraLoaders(initialRequest.extra_loaders);
+        setExtraForklifts(initialRequest.extra_forklifts);
+        setPreStageProducts(initialRequest.pre_stage_products);
+    }, [initialRequest]);
     const hasInputs = extraLoaders > 0 || extraForklifts > 0 || preStageProducts;
 
     function resetAll() {

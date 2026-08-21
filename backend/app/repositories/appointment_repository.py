@@ -22,9 +22,14 @@ class AppointmentRepository:
         facility_id: str | None = None,
         customer_id: str | None = None,
         carrier_id: str | None = None,
+        assigned_dock_id: str | None = None,
         appointment_type: str | None = None,
         date_from: date | None = None,
         date_to: date | None = None,
+        pallet_min: int | None = None,
+        pallet_max: int | None = None,
+        sku_min: int | None = None,
+        sku_max: int | None = None,
         status: str | None = None,
         risk_level: str | None = None,
         outcome: str | None = None,
@@ -75,9 +80,14 @@ class AppointmentRepository:
             "facility_id": facility_id,
             "customer_id": customer_id,
             "carrier_id": carrier_id,
+            "assigned_dock_id": assigned_dock_id,
             "appointment_type": appointment_type,
             "date_from": date_from,
             "date_to": date_to,
+            "pallet_min": pallet_min,
+            "pallet_max": pallet_max,
+            "sku_min": sku_min,
+            "sku_max": sku_max,
             "status": status,
             "risk_level": risk_level,
             "outcome": outcome,
@@ -167,7 +177,10 @@ class AppointmentRepository:
                       CAST(:carrier_id AS VARCHAR) IS NULL
                       OR a.carrier_id = CAST(:carrier_id AS VARCHAR)
                   )
-
+                    AND (
+                        CAST(:assigned_dock_id AS VARCHAR) IS NULL
+                        OR a.assigned_dock_id = CAST(:assigned_dock_id AS VARCHAR)
+                    )
                   AND (
                       CAST(:appointment_type AS VARCHAR) IS NULL
                       OR LOWER(a.appointment_type) =
@@ -183,7 +196,25 @@ class AppointmentRepository:
                       CAST(:date_to AS DATE) IS NULL
                       OR a.scheduled_time < CAST(:date_to AS DATE)
                   )
+                  AND (
+      CAST(:pallet_min AS INTEGER) IS NULL
+      OR a.pallet_count >= CAST(:pallet_min AS INTEGER)
+)
 
+AND (
+      CAST(:pallet_max AS INTEGER) IS NULL
+      OR a.pallet_count <= CAST(:pallet_max AS INTEGER)
+)
+
+AND (
+      CAST(:sku_min AS INTEGER) IS NULL
+      OR a.sku_count >= CAST(:sku_min AS INTEGER)
+)
+
+AND (
+      CAST(:sku_max AS INTEGER) IS NULL
+      OR a.sku_count <= CAST(:sku_max AS INTEGER)
+)
                   AND (
                       CAST(:status AS VARCHAR) IS NULL
                       OR a.status = CAST(:status AS VARCHAR)
@@ -272,7 +303,10 @@ class AppointmentRepository:
                       CAST(:carrier_id AS VARCHAR) IS NULL
                       OR a.carrier_id = CAST(:carrier_id AS VARCHAR)
                   )
-
+                    AND (
+                        CAST(:assigned_dock_id AS VARCHAR) IS NULL
+                        OR a.assigned_dock_id = CAST(:assigned_dock_id AS VARCHAR)
+                    )
                   AND (
                       CAST(:appointment_type AS VARCHAR) IS NULL
                       OR LOWER(a.appointment_type) =
@@ -288,7 +322,25 @@ class AppointmentRepository:
                       CAST(:date_to AS DATE) IS NULL
                       OR a.scheduled_time < CAST(:date_to AS DATE)
                   )
+AND (
+      CAST(:pallet_min AS INTEGER) IS NULL
+      OR a.pallet_count >= CAST(:pallet_min AS INTEGER)
+)
 
+AND (
+      CAST(:pallet_max AS INTEGER) IS NULL
+      OR a.pallet_count <= CAST(:pallet_max AS INTEGER)
+)
+
+AND (
+      CAST(:sku_min AS INTEGER) IS NULL
+      OR a.sku_count >= CAST(:sku_min AS INTEGER)
+)
+
+AND (
+      CAST(:sku_max AS INTEGER) IS NULL
+      OR a.sku_count <= CAST(:sku_max AS INTEGER)
+)
                   AND (
                       CAST(:status AS VARCHAR) IS NULL
                       OR a.status = CAST(:status AS VARCHAR)

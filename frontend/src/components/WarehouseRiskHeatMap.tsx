@@ -11,7 +11,7 @@ type Props = {
   data: WarehouseHeatmapData;
   onOpenAppointment: (appointmentId: string) => void;
   onRunWhatIf: () => void;
-  onFilterRisk: (riskLevel?: string) => void;
+  onFilterDock: (dockId?: string) => void;
   embedded?: boolean;
   limitToTopTen?: boolean;
 };
@@ -29,7 +29,7 @@ export function WarehouseRiskHeatMap({
   data,
   onOpenAppointment,
   onRunWhatIf,
-  onFilterRisk,
+  onFilterDock,
   embedded = false,
   limitToTopTen = false,
 }: Props) {
@@ -39,11 +39,11 @@ export function WarehouseRiskHeatMap({
   const docks = useMemo(
     () => limitToTopTen
       ? [...data.docks]
-          .sort((left, right) =>
-            right.risk_score - left.risk_score ||
-            right.utilization_percent - left.utilization_percent
-          )
-          .slice(0, 10)
+        .sort((left, right) =>
+          right.risk_score - left.risk_score ||
+          right.utilization_percent - left.utilization_percent
+        )
+        .slice(0, 10)
       : data.docks,
     [data.docks, limitToTopTen],
   );
@@ -206,7 +206,11 @@ export function WarehouseRiskHeatMap({
                 Open highest-risk appointment
               </button>
             )}
-            <button type="button" className="secondary-button" onClick={() => onFilterRisk(selectedDock.health === "Critical" ? "Critical" : selectedDock.health === "High" ? "High" : undefined)}>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={() => onFilterDock(selectedDock.dock_id)}
+            >
               View impacted queue
             </button>
             <button type="button" className="secondary-button" onClick={onRunWhatIf}>

@@ -39,6 +39,11 @@ type DisplayMessage = {
     facts?: GlobalCopilotFact[];
     quickActions?: GlobalCopilotQuickAction[];
     actionIntent?: GlobalCopilotActionIntent | null;
+
+    // Structured analytical state returned by the backend.
+    // Stored with assistant messages so follow-up questions can
+    // continue from the previous analytical query.
+    canonicalQueryState?: Record<string, unknown> | null;
 };
 
 const INITIAL_SUGGESTIONS = [
@@ -181,7 +186,7 @@ export function GlobalWarehouseCopilot({
         setMessages((current) => [
             ...current.map((currentMessage) =>
                 sourceMessageId &&
-                currentMessage.id === sourceMessageId
+                    currentMessage.id === sourceMessageId
                     ? {
                         ...currentMessage,
                         actionIntent: null,
@@ -246,6 +251,10 @@ export function GlobalWarehouseCopilot({
             .map((message) => ({
                 role: message.role,
                 content: message.content,
+                canonical_query_state:
+                    message.role === "assistant"
+                        ? message.canonicalQueryState ?? null
+                        : null,
             }));
 
         const userMessage: DisplayMessage = {
@@ -261,6 +270,13 @@ export function GlobalWarehouseCopilot({
                 question: finalQuestion,
                 conversation_history: history,
                 facility_id: activeFilters.facilityId,
+                customer_id: activeFilters.customerId,
+                carrier_id: activeFilters.carrierId,
+                appointment_type: activeFilters.appointmentType,
+                status: activeFilters.status,
+                risk_level: activeFilters.riskLevel,
+                date_from: activeFilters.dateFrom,
+                date_to: activeFilters.dateTo,
                 booking_draft: bookingDraft,
             });
             if (result.action_intent?.action === "book_appointment") {
@@ -293,6 +309,8 @@ export function GlobalWarehouseCopilot({
                     facts: result.facts,
                     quickActions: result.quick_actions,
                     actionIntent: result.action_intent,
+                    canonicalQueryState:
+                        result.canonical_query_state ?? null,
                 },
             ]);
             if (result.suggested_questions.length) {
@@ -312,6 +330,43 @@ export function GlobalWarehouseCopilot({
     function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
         void submitQuestion();
+    }
+
+    function filtersFromCopilotMetadata(
+        metadata: Record<string, string>,
+    ): AppointmentFilters {
+        const parseOptionalNumber = (value: string | undefined): number | undefined => {
+            if (value === undefined || value === "") return undefined;
+            const parsed = Number(value);
+            return Number.isFinite(parsed) ? parsed : undefined;
+        };
+
+        return {
+            ...activeFilters,
+            facilityId: metadata.facility_id ?? activeFilters.facilityId,
+            customerId: metadata.customer_id ?? activeFilters.customerId,
+            carrierId: metadata.carrier_id ?? activeFilters.carrierId,
+            appointmentType: metadata.appointment_type
+                ? metadata.appointment_type as "Inbound" | "Outbound"
+                : activeFilters.appointmentType,
+            dateFrom: metadata.date_from ?? activeFilters.dateFrom,
+            dateTo: metadata.date_to ?? activeFilters.dateTo,
+            palletMin: metadata.pallet_min !== undefined
+                ? parseOptionalNumber(metadata.pallet_min)
+                : activeFilters.palletMin,
+            palletMax: metadata.pallet_max !== undefined
+                ? parseOptionalNumber(metadata.pallet_max)
+                : activeFilters.palletMax,
+            skuMin: metadata.sku_min !== undefined
+                ? parseOptionalNumber(metadata.sku_min)
+                : activeFilters.skuMin,
+            skuMax: metadata.sku_max !== undefined
+                ? parseOptionalNumber(metadata.sku_max)
+                : activeFilters.skuMax,
+            status: metadata.status ?? activeFilters.status,
+            riskLevel: metadata.risk_level ?? activeFilters.riskLevel,
+            outcome: metadata.outcome ?? activeFilters.outcome,
+        };
     }
 
     async function executeAction(message: DisplayMessage) {
@@ -340,13 +395,9 @@ export function GlobalWarehouseCopilot({
                 if (intent.metadata.clear === "true") {
                     onClearFilters();
                 } else {
-                    onApplyFilters({
-                        ...activeFilters,
-                        riskLevel: intent.metadata.risk_level ?? undefined,
-                        status: intent.metadata.status ?? undefined,
-                        outcome: undefined,
-                    });
+                    onApplyFilters(filtersFromCopilotMetadata(intent.metadata));
                 }
+
                 document.querySelector(".operations-workspace-grid")?.scrollIntoView({
                     behavior: "smooth",
                     block: "start",
@@ -397,14 +448,12 @@ export function GlobalWarehouseCopilot({
         }
 
         if (action.action === "filter_appointments") {
-            onApplyFilters({
-                ...activeFilters,
-                facilityId: action.metadata.facility_id ?? activeFilters.facilityId,
-                status: action.metadata.status ?? activeFilters.status,
-                riskLevel: action.metadata.risk_level ?? activeFilters.riskLevel,
-                outcome: action.metadata.outcome ?? activeFilters.outcome,
+            onApplyFilters(filtersFromCopilotMetadata(action.metadata));
+
+            document.querySelector(".operations-workspace-grid")?.scrollIntoView({
+                behavior: "smooth",
+                block: "start",
             });
-            document.querySelector(".operations-workspace-grid")?.scrollIntoView({ behavior: "smooth", block: "start" });
             return;
         }
 

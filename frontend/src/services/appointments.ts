@@ -64,50 +64,70 @@ export async function getPaginatedAppointments(
   });
 
   if (query.facilityId) {
-    params.set(
-      "facility_id",
-      query.facilityId,
-    );
+    params.set("facility_id", query.facilityId);
   }
 
-  if (query.customerId) params.set("customer_id", query.customerId);
-  if (query.carrierId) params.set("carrier_id", query.carrierId);
-  if (query.appointmentType) params.set("appointment_type", query.appointmentType);
-  if (query.dateFrom) params.set("date_from", query.dateFrom);
-  if (query.dateTo) params.set("date_to", query.dateTo);
+  if (query.customerId) {
+    params.set("customer_id", query.customerId);
+  }
+
+  if (query.carrierId) {
+    params.set("carrier_id", query.carrierId);
+  }
+
+  if (query.dockId) {
+    params.set("assigned_dock_id", query.dockId);
+  }
+
+  if (query.appointmentType) {
+    params.set("appointment_type", query.appointmentType);
+  }
+
+  if (query.dateFrom) {
+    params.set("date_from", query.dateFrom.split("T")[0]);
+  }
+
+  if (query.dateTo) {
+    params.set("date_to", query.dateTo.split("T")[0]);
+  }
+
+  if (query.palletMin !== undefined) {
+    params.set("pallet_min", String(query.palletMin));
+  }
+
+  if (query.palletMax !== undefined) {
+    params.set("pallet_max", String(query.palletMax));
+  }
+
+  if (query.skuMin !== undefined) {
+    params.set("sku_min", String(query.skuMin));
+  }
+
+  if (query.skuMax !== undefined) {
+    params.set("sku_max", String(query.skuMax));
+  }
 
   if (query.status) {
-    params.set(
-      "status",
-      query.status,
-    );
+    params.set("status", query.status);
   }
 
   if (query.riskLevel) {
-    params.set(
-      "risk_level",
-      query.riskLevel,
-    );
+    params.set("risk_level", query.riskLevel);
   }
 
   if (query.outcome) {
-    params.set(
-      "outcome",
-      query.outcome,
-    );
+    params.set("outcome", query.outcome);
   }
 
   if (query.search?.trim()) {
-    params.set(
-      "search",
-      query.search.trim(),
-    );
+    params.set("search", query.search.trim());
   }
 
   if (query.sortBy && query.sortDirection) {
     params.set("sort_by", query.sortBy);
     params.set("sort_direction", query.sortDirection);
   }
+
   const response = await fetch(
     `${API_BASE_URL}/api/appointments/paged?${params.toString()}`,
   );

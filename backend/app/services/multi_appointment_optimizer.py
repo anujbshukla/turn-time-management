@@ -1442,12 +1442,16 @@ class MultiAppointmentOptimizerService:
                 WHERE mission_appointment.mission_id =
                       :mission_id
                 GROUP BY
-                    mission_appointment.appt_id,
-                    mission_appointment.priority_order,
-                    mission_appointment.baseline_risk_score,
-                    mission_appointment.baseline_projected_turn_minutes,
-                    mission_appointment.optimized_projected_turn_minutes,
-                    mission_appointment.sla_recovered
+                        mission_appointment.appt_id,
+                        mission_appointment.priority_order,
+                        mission_appointment.baseline_risk_score,
+                        mission_appointment.baseline_projected_turn_minutes,
+                        mission_appointment.optimized_projected_turn_minutes,
+                        mission_appointment.sla_recovered,
+                        mission_appointment.actual_turn_minutes,
+                        mission_appointment.actual_sla_missed,
+                        mission_appointment.realized_minutes_saved,
+                        mission_appointment.realized_net_savings
                 ORDER BY mission_appointment.priority_order;
                 """
             ),

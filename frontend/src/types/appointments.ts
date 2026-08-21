@@ -1,99 +1,117 @@
 export interface AppointmentListItem {
-    appt_id: string;
-    customer_name: string | null;
-    customer_id: string | null;
+  appt_id: string;
+  customer_name: string | null;
+  customer_id: string | null;
 
-    facility_id: string;
-    facility_name: string;
+  facility_id: string;
+  facility_name: string;
 
-    carrier_id: string | null;
-    carrier_name: string | null;
+  carrier_id: string | null;
+  carrier_name: string | null;
 
-    scheduled_time: string;
+  scheduled_time: string;
 
-    estimated_arrival_time: string | null;
-    actual_arrival_time: string | null;
+  estimated_arrival_time: string | null;
+  actual_arrival_time: string | null;
 
-    assigned_dock_id: string | null;
-    dock_name: string | null;
+  assigned_dock_id: string | null;
+  dock_name: string | null;
 
-    status: string;
+  status: string;
 
-    pallet_count: number;
-    sku_count: number;
+  pallet_count: number;
+  sku_count: number;
 
-    priority: number;
+  priority: number;
 
-    sla_minutes: number;
+  sla_minutes: number;
 
-    actual_arrival_delay_minutes: number | null;
+  actual_arrival_delay_minutes: number | null;
 
-    predicted_duration_minutes: number | null;
+  predicted_duration_minutes: number | null;
 
-    turn_risk_score: number | null;
+  turn_risk_score: number | null;
 
-    sla_recovery_probability: number | null;
+  sla_recovery_probability: number | null;
 
-    predicted_missed: boolean | null;
+  predicted_missed: boolean | null;
 
-    recommended_action: string | null;
+  recommended_action: string | null;
 
-    estimated_savings: number | null;
+  estimated_savings: number | null;
 }
 
 export interface AppointmentPagination {
-    page: number;
-    page_size: number;
-    total_items: number;
-    total_pages: number;
-    has_previous: boolean;
-    has_next: boolean;
+  page: number;
+  page_size: number;
+  total_items: number;
+  total_pages: number;
+  has_previous: boolean;
+  has_next: boolean;
 }
 
 export interface PaginatedAppointmentsResponse {
-    items: AppointmentListItem[];
-    pagination: AppointmentPagination;
+  items: AppointmentListItem[];
+  pagination: AppointmentPagination;
 }
 
 export type AppointmentSortField =
-    | "appt_id"
-    | "customer_name"
-    | "facility_name"
-    | "carrier_name"
-    | "scheduled_time"
-    | "status"
-    | "turn_risk_score";
+  | "appt_id"
+  | "customer_name"
+  | "facility_name"
+  | "carrier_name"
+  | "scheduled_time"
+  | "status"
+  | "turn_risk_score";
 
 export type SortDirection = "asc" | "desc";
 
 export interface AppointmentQuery {
-    page: number;
-    pageSize: number;
+  page: number;
+  pageSize: number;
 
-    facilityId?: string;
-    customerId?: string;
-    carrierId?: string;
-    appointmentType?: "Inbound" | "Outbound";
-    dateFrom?: string;
-    dateTo?: string;
-    status?: string;
-    riskLevel?: string;
-    outcome?: string;
-    search?: string;
-    sortBy?: AppointmentSortField;
-    sortDirection?: SortDirection;
+  facilityId?: string;
+  customerId?: string;
+  carrierId?: string;
+  dockId?: string;
+  appointmentType?: "Inbound" | "Outbound";
+
+  dateFrom?: string;
+  dateTo?: string;
+
+  palletMin?: number;
+  palletMax?: number;
+  skuMin?: number;
+  skuMax?: number;
+
+  status?: string;
+  riskLevel?: string;
+  outcome?: string;
+  search?: string;
+
+  sortBy?: AppointmentSortField;
+  sortDirection?: SortDirection;
 }
+
 export type AppointmentFilters = {
-    facilityId?: string;
-    customerId?: string;
-    carrierId?: string;
-    appointmentType?: "Inbound" | "Outbound";
-    dateFrom?: string;
-    dateTo?: string;
-    status?: string;
-    riskLevel?: string;
-    outcome?: string;
-    search?: string;
+  facilityId?: string;
+  customerId?: string;
+  carrierId?: string;
+  dockId?: string;
+  appointmentType?: "Inbound" | "Outbound";
+
+  dateFrom?: string;
+  dateTo?: string;
+
+  palletMin?: number;
+  palletMax?: number;
+  skuMin?: number;
+  skuMax?: number;
+
+  status?: string;
+  riskLevel?: string;
+  outcome?: string;
+  search?: string;
 };
 
 export interface AppointmentReferenceItem {
@@ -168,7 +186,6 @@ export interface CreateAppointmentResponse {
   message: string;
 }
 
-
 export interface UpdateAppointmentPayload {
   customer_id?: string | null;
   facility_id: string;
@@ -189,6 +206,7 @@ export interface UpdateAppointmentPayload {
   products: CreateAppointmentProductPayload[];
 }
 
-export interface UpdateAppointmentResponse extends CreateAppointmentResponse {
+export interface UpdateAppointmentResponse
+  extends CreateAppointmentResponse {
   changed_fields: string[];
 }

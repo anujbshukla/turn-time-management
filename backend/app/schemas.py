@@ -159,10 +159,24 @@ from typing import Literal
 
 class CopilotConversationMessage(BaseModel):
     role: Literal["user", "assistant"]
+
     content: str = Field(
         min_length=1,
         max_length=4000,
     )
+
+    # Structured analytics state produced by Global Copilot.
+    #
+    # Assistant messages can carry this state forward so follow-up
+    # questions such as:
+    #
+    #   "Rank carriers by average delay"
+    #   "What about inbound only?"
+    #   "Now show the top 3"
+    #
+    # can reuse the previous analytical context without reparsing
+    # the assistant's natural-language answer.
+    canonical_query_state: dict[str, Any] | None = None
 
 
 class AppointmentCopilotRequest(BaseModel):
@@ -415,6 +429,31 @@ class GlobalCopilotRequest(BaseModel):
         max_length=100,
     )
 
+    customer_id: str | None = Field(
+        default=None,
+        max_length=100,
+    )
+
+    carrier_id: str | None = Field(
+        default=None,
+        max_length=100,
+    )
+
+    appointment_type: Literal["Inbound", "Outbound"] | None = None
+
+    status: str | None = Field(
+        default=None,
+        max_length=50,
+    )
+
+    risk_level: str | None = Field(
+        default=None,
+        max_length=50,
+    )
+
+    date_from: date | None = None
+    date_to: date | None = None
+
     conversation_history: list[
         CopilotConversationMessage
     ] = Field(
@@ -447,6 +486,8 @@ class GlobalCopilotResponse(BaseModel):
     )
 
     action_intent: CopilotActionIntent | None = None
+
+    canonical_query_state: dict[str, Any] | None = None
 # ==========================================================
 # Multi-Appointment Optimization
 # ==========================================================

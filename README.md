@@ -1,15 +1,18 @@
-# Completed outcome consistency fix
+# Copilot ranking reliability fix
 
-This update makes all completed-outcome views use one canonical rule:
+Changes:
+- Primary ranking requires at least 5 appointments when any group meets that threshold.
+- Groups with 1–4 appointments remain visible and are labeled `Limited sample`.
+- A higher raw value from a limited sample is explicitly called out but does not become the confident leader.
+- If every group is below 5 appointments, Copilot answers with an explicit limited-evidence warning.
+- Fixes singular/plural grammar (`1 appointment`, `2 appointments`).
+- Adds regression tests for the Dock 01 vs Dock 07 scenario and all-small-sample behavior.
 
-- Recovered: `actual_turn_time_minutes <= sla_minutes`
-- Missed SLA: `actual_turn_time_minutes > sla_minutes`
-- Recovered with recommendations additionally requires an accepted/completed recommendation or an accepted recommendation action.
+Apply the two backend files to the matching repository paths, then run:
 
-Updated files:
+    cd C:\turn-time-management\backend
+    pytest
 
-- `backend/app/repositories/appointment_repository.py`
-- `backend/app/repositories/dashboard_repository.py`
-- `database/scripts/synchronize_demo_sla_outcomes.sql`
+Restart FastAPI and retest:
 
-After copying the files, run the SQL script once, restart FastAPI, and hard-refresh the frontend.
+    Which docks have the highest average risk today?

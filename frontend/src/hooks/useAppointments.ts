@@ -35,10 +35,16 @@ export function useAppointments(
 
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
   const [sortBy, setSortBy] =
-    useState<AppointmentSortField | undefined>(undefined);
+    useState<AppointmentSortField | undefined>(
+      undefined,
+    );
+
   const [sortDirection, setSortDirection] =
-    useState<SortDirection | undefined>(undefined);
+    useState<SortDirection | undefined>(
+      undefined,
+    );
 
   const [refreshKey, setRefreshKey] =
     useState(0);
@@ -55,9 +61,14 @@ export function useAppointments(
     filters.facilityId,
     filters.customerId,
     filters.carrierId,
+    filters.dockId,
     filters.appointmentType,
     filters.dateFrom,
     filters.dateTo,
+    filters.palletMin,
+    filters.palletMax,
+    filters.skuMin,
+    filters.skuMax,
     filters.status,
     filters.riskLevel,
     filters.outcome,
@@ -76,26 +87,52 @@ export function useAppointments(
           await getPaginatedAppointments({
             page,
             pageSize,
+
             facilityId:
               filters.facilityId,
+
             customerId:
               filters.customerId,
+
             carrierId:
               filters.carrierId,
+
+            dockId:
+              filters.dockId,
+
             appointmentType:
               filters.appointmentType,
+
             dateFrom:
               filters.dateFrom,
+
             dateTo:
               filters.dateTo,
+
+            palletMin:
+              filters.palletMin,
+
+            palletMax:
+              filters.palletMax,
+
+            skuMin:
+              filters.skuMin,
+
+            skuMax:
+              filters.skuMax,
+
             status:
               filters.status,
+
             riskLevel:
               filters.riskLevel,
+
             outcome:
               filters.outcome,
+
             search:
               filters.search,
+
             sortBy,
             sortDirection,
           });
@@ -135,9 +172,14 @@ export function useAppointments(
     filters.facilityId,
     filters.customerId,
     filters.carrierId,
+    filters.dockId,
     filters.appointmentType,
     filters.dateFrom,
     filters.dateTo,
+    filters.palletMin,
+    filters.palletMax,
+    filters.skuMin,
+    filters.skuMax,
     filters.status,
     filters.riskLevel,
     filters.outcome,

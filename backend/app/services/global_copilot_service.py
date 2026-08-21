@@ -61,6 +61,8 @@ class GlobalCopilotService:
         r"^the top\s+\d+\b",
         r"^(?:today|tomorrow|yesterday)$",
         r"^(?:this|next|last)\s+(?:week|month)$",
+        r"^(?:last|past)\s+\d+\s+days?$",
+        r"^next\s+\d+\s+hours?$",
         r"^(?:inbound|outbound)$",
         r"^only\s+(?:inbound|outbound)\b",
         r"^sort by\b",
@@ -94,6 +96,20 @@ class GlobalCopilotService:
         "recommendation",
         "utilization",
         "savings",
+        "pallet",
+        "pallets",
+        "sku",
+        "skus",
+        "loader",
+        "loaders",
+        "forklift",
+        "forklifts",
+        "mission",
+        "missions",
+        "action effectiveness",
+        "minutes per pallet",
+        "prediction",
+        "predictions",
     )
 
     CONVERSATION_RESET_PHRASES = (
@@ -156,7 +172,8 @@ class GlobalCopilotService:
             data_service=self.data_copilot_service,
             analytics_repository=self.analytics_repository,
             dashboard_service=self.dashboard_service,
-        )
+            appointment_repository=self.appointment_repository,
+)
 
     def answer(
         self,
@@ -1368,7 +1385,17 @@ class GlobalCopilotService:
             (value for value in ("scheduled", "arrived", "waiting", "in progress", "completed") if value in question),
             None,
         )
-        if any(phrase in question for phrase in ("show only", "filter", "show me", "show ")) and (risk_level or status):
+        if any(
+            phrase in question
+            for phrase in (
+                "show only",
+                "filter",
+                "filter to",
+                "filter by",
+                "limit to",
+                "only show",
+            )
+        ) and (risk_level or status):
             metadata: dict[str, str] = {}
             if risk_level:
                 metadata["risk_level"] = risk_level.title()

@@ -134,10 +134,10 @@ class AppointmentService:
             }
         )
     def __init__(
-        self,
-        repository: AppointmentRepository,
-    ) -> None:
-        self.repository = repository
+            self,
+            repository: AppointmentRepository,
+        ) -> None:
+            self.repository = repository
 
     def get_paginated(
         self,
@@ -147,9 +147,14 @@ class AppointmentService:
         facility_id: str | None,
         customer_id: str | None,
         carrier_id: str | None,
+        assigned_dock_id: str | None,
         appointment_type: str | None,
         date_from: date | None,
         date_to: date | None,
+        pallet_min: int | None,
+        pallet_max: int | None,
+        sku_min: int | None,
+        sku_max: int | None,
         status: str | None,
         risk_level: str | None,
         outcome: str | None,
@@ -163,9 +168,14 @@ class AppointmentService:
             facility_id=facility_id,
             customer_id=customer_id,
             carrier_id=carrier_id,
+            assigned_dock_id=assigned_dock_id,
             appointment_type=appointment_type,
             date_from=date_from,
             date_to=date_to,
+            pallet_min=pallet_min,
+            pallet_max=pallet_max,
+            sku_min=sku_min,
+            sku_max=sku_max,
             status=status,
             risk_level=risk_level,
             outcome=outcome,

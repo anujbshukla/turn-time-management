@@ -16,7 +16,7 @@ type Props = {
   onFilterQueue: (riskLevel?: string) => void;
   onRunWhatIf: () => void;
   onForecast: () => void;
-  onCompare: () => void;
+  onCompare: (riskLevel?: string) => void;
 };
 
 type Candidate = {
@@ -193,65 +193,65 @@ export function AiActionCardsPanel({
         </p>
 
         <div className="ai-action-cards-grid">
-        {cards.length === 0 ? (
-          <div className="ai-action-empty">
-            <span className="ai-mission-mark" aria-hidden="true">AI</span>
-            <strong>No active AI priorities</strong>
-            <p>
-              New mission, alert and forecast recommendations will appear here
-              as operating conditions change.
-            </p>
-          </div>
-        ) : cards.map((card) => {
-          const actions = [];
+          {cards.length === 0 ? (
+            <div className="ai-action-empty">
+              <span className="ai-mission-mark" aria-hidden="true">AI</span>
+              <strong>No active AI priorities</strong>
+              <p>
+                New mission, alert and forecast recommendations will appear here
+                as operating conditions change.
+              </p>
+            </div>
+          ) : cards.map((card) => {
+            const actions = [];
 
-          if (card.appointmentId) {
+            if (card.appointmentId) {
+              actions.push({
+                label: "Open",
+                variant: "primary" as const,
+                onClick: () => onOpenAppointment(card.appointmentId!),
+              });
+            }
+
+            if (card.riskLevel) {
+              actions.push({
+                label: "View queue",
+                onClick: () => onFilterQueue(card.riskLevel ?? undefined),
+              });
+            }
+
+            if (card.source === "Forecast") {
+              actions.push({
+                label: "Forecast",
+                onClick: onForecast,
+              });
+            } else {
+              actions.push({
+                label: "Compare",
+                onClick: () => onCompare(card.riskLevel ?? undefined),
+              });
+            }
+
             actions.push({
-              label: "Open",
-              variant: "primary" as const,
-              onClick: () => onOpenAppointment(card.appointmentId!),
+              label: "Optimize",
+              onClick: onRunWhatIf,
             });
-          }
 
-          if (card.riskLevel) {
-            actions.push({
-              label: "View queue",
-              onClick: () => onFilterQueue(card.riskLevel ?? undefined),
-            });
-          }
-
-          if (card.source === "Forecast") {
-            actions.push({
-              label: "Forecast",
-              onClick: onForecast,
-            });
-          } else {
-            actions.push({
-              label: "Compare",
-              onClick: onCompare,
-            });
-          }
-
-          actions.push({
-            label: "Optimize",
-            onClick: onRunWhatIf,
-          });
-
-          return (
-            <AiActionCard
-              key={card.id}
-              source={card.source}
-              severity={card.severity}
-              title={card.title}
-              summary={card.summary}
-              recommendation={card.recommendation}
-              metrics={card.metrics}
-              confidence={card.confidence}
-              explanation={card.explanation}
-              actions={actions}
-            />
-          );
-        })}
+            return (
+              <AiActionCard
+                key={card.id}
+                source={card.source}
+                severity={card.severity}
+                title={card.title}
+                summary={card.summary}
+                recommendation={card.recommendation}
+                metrics={card.metrics}
+                confidence={card.confidence}
+                explanation={card.explanation}
+                actions={actions}
+              />
+            );
+          })}
         </div>
       </div>
     </section>

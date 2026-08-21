@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+from app.repositories.appointment_repository import AppointmentRepository
 import re
 from typing import Any
 
@@ -47,17 +47,29 @@ class WarehouseAgent:
         "show the drivers",
         "and which appointments",
     )
-
+    APPOINTMENT_RISK_PHRASES = (
+        "why is this appointment high risk",
+        "why is this appointment at risk",
+        "why is this appointment risky",
+        "why is that appointment high risk",
+        "why is that appointment at risk",
+        "why is that appointment risky",
+        "why is it high risk",
+        "why is it at risk",
+        "why is it risky",
+    )
     def __init__(
         self,
         *,
         data_service: DataCopilotService,
         analytics_repository: CopilotAnalyticsRepository,
         dashboard_service: DashboardService,
+        appointment_repository: AppointmentRepository,
     ) -> None:
         self.data_service = data_service
         self.analytics_repository = analytics_repository
         self.dashboard_service = dashboard_service
+        self.appointment_repository = appointment_repository
         self.planner = WarehouseQueryPlanner()
 
     def answer(
@@ -69,7 +81,15 @@ class WarehouseAgent:
         ordinal_action = self._resolve_ordinal_open(payload, normalized)
         if ordinal_action is not None:
             return ordinal_action
-
+        if any(
+            phrase in normalized
+            for phrase in self.APPOINTMENT_RISK_PHRASES
+        ):
+            appointment_risk = self._explain_contextual_appointment_risk(
+                payload
+            )
+            if appointment_risk is not None:
+                return appointment_risk
         if any(
             phrase in normalized
             for phrase in self.EXECUTIVE_SUMMARY_PHRASES
@@ -85,6 +105,245 @@ class WarehouseAgent:
                 return compound
 
         return self.data_service.answer(payload)
+    def _explain_contextual_appointment_risk(
+        self,
+        payload: GlobalCopilotRequest,
+    ) -> dict[str, Any] | None:
+        appt_id = self._resolve_contextual_appointment_id(payload)
+
+        if appt_id is None:
+            return {
+                "mode": "answer",
+                "answer": (
+                    "I could not determine which appointment you mean. "
+                    "Ask me to show the highest-risk appointments first, "
+                    "or include the appointment ID."
+                ),
+                "facts": [],
+                "suggested_questions": [
+                    "Show the five highest-risk appointments",
+                ],
+                "quick_actions": [],
+                "action_intent": None,
+            }
+
+        details = self.appointment_repository.get_details(appt_id)
+
+        if details is None:
+            return {
+                "mode": "answer",
+                "answer": (
+                    f"I resolved the appointment as {appt_id}, but I could "
+                    "not find its current operational details."
+                ),
+                "facts": [
+                    {
+                        "label": "Appointment",
+                        "value": appt_id,
+                    }
+                ],
+                "suggested_questions": [
+                    "Show the five highest-risk appointments",
+                ],
+                "quick_actions": [],
+                "action_intent": None,
+            }
+
+        return self._build_appointment_risk_answer(
+            appt_id,
+            details,
+        )
+
+
+    def _resolve_contextual_appointment_id(
+        self,
+        payload: GlobalCopilotRequest,
+    ) -> str | None:
+        # First allow an explicit appointment ID in the current question.
+        current_match = re.search(
+            r"\bDEMO[A-Z0-9_-]*\b",
+            payload.question,
+            re.IGNORECASE,
+        )
+        if current_match:
+            return current_match.group(0).upper()
+
+        # Search newest messages first. This handles a previous answer such as:
+        # "DEMO0152864 has the highest risk..."
+        for message in reversed(payload.conversation_history):
+            content = str(message.content or "")
+
+            match = re.search(
+                r"\bDEMO[A-Z0-9_-]*\b",
+                content,
+                re.IGNORECASE,
+            )
+            if match:
+                return match.group(0).upper()
+
+        return None
+    def _build_appointment_risk_answer(
+        self,
+        appt_id: str,
+        details: dict[str, Any],
+    ) -> dict[str, Any]:
+        prediction = details.get("prediction") or {}
+        recommendation = details.get("recommendation") or {}
+        recovery = details.get("recovery_summary") or {}
+
+        risk_score = float(
+            prediction.get("turn_risk_score") or 0
+        )
+        miss_probability = float(
+            prediction.get("sla_miss_probability") or 0
+        )
+        recovery_probability = float(
+            prediction.get("sla_recovery_probability") or 0
+        )
+        predicted_delay = int(
+            prediction.get("predicted_delay_minutes") or 0
+        )
+        predicted_duration = int(
+            prediction.get("predicted_duration_minutes") or 0
+        )
+
+        predicted_turn = (
+            recovery.get("predicted_turn_time_minutes")
+        )
+        if predicted_turn is None:
+            predicted_turn = (
+                max(0, predicted_delay)
+                + predicted_duration
+            )
+
+        sla_minutes = int(
+            recovery.get("sla_minutes")
+            or details.get("sla_minutes")
+            or 120
+        )
+
+        reasons: list[str] = []
+
+        if predicted_delay > 0:
+            reasons.append(
+                f"a predicted arrival delay of "
+                f"{predicted_delay} minutes"
+            )
+
+        if predicted_turn > sla_minutes:
+            reasons.append(
+                f"a predicted total turn time of "
+                f"{int(predicted_turn)} minutes against a "
+                f"{sla_minutes}-minute SLA"
+            )
+
+        if miss_probability >= 0.5:
+            displayed_probability = (
+                miss_probability * 100
+                if miss_probability <= 1
+                else miss_probability
+            )
+            reasons.append(
+                f"an SLA miss probability of "
+                f"{displayed_probability:.0f}%"
+            )
+
+        if prediction.get("predicted_missed"):
+            reasons.append(
+                "the current prediction classifies the "
+                "appointment as an expected SLA miss"
+            )
+
+        if risk_score >= 80:
+            risk_label = "Critical"
+        elif risk_score >= 60:
+            risk_label = "High"
+        elif risk_score >= 30:
+            risk_label = "Medium"
+        else:
+            risk_label = "Low"
+
+        if reasons:
+            reason_text = "; ".join(reasons)
+
+            answer = (
+                f"{appt_id} is currently rated {risk_label} risk "
+                f"with a turn-risk score of {risk_score:.0f}/100. "
+                f"The main signals are {reason_text}."
+            )
+        else:
+            answer = (
+                f"{appt_id} currently has a turn-risk score of "
+                f"{risk_score:.0f}/100 ({risk_label}). "
+                "The latest prediction does not expose a stronger "
+                "individual risk driver beyond the current model signals."
+            )
+
+        recommended_action = recommendation.get(
+            "recommended_action"
+        )
+
+        if recommended_action:
+            answer += (
+                f" The current recovery recommendation is: "
+                f"{recommended_action}."
+            )
+
+        displayed_miss_probability = (
+            miss_probability * 100
+            if miss_probability <= 1
+            else miss_probability
+        )
+
+        displayed_recovery_probability = (
+            recovery_probability * 100
+            if recovery_probability <= 1
+            else recovery_probability
+        )
+
+        facts = [
+            {
+                "label": "Appointment",
+                "value": appt_id,
+            },
+            {
+                "label": "Risk",
+                "value": f"{risk_score:.0f}/100 · {risk_label}",
+            },
+            {
+                "label": "SLA miss probability",
+                "value": f"{displayed_miss_probability:.0f}%",
+            },
+            {
+                "label": "Predicted delay",
+                "value": f"{predicted_delay} min",
+            },
+            {
+                "label": "Predicted turn",
+                "value": f"{int(predicted_turn)} min",
+            },
+            {
+                "label": "SLA",
+                "value": f"{sla_minutes} min",
+            },
+            {
+                "label": "Recovery probability",
+                "value": f"{displayed_recovery_probability:.0f}%",
+            },
+        ]
+
+        return {
+            "mode": "answer",
+            "answer": answer,
+            "facts": facts,
+            "suggested_questions": [
+                f"Open {appt_id}",
+                "What should we do to recover this appointment?",
+                "What happens if we take the recommended actions?",
+            ],
+            "quick_actions": [],
+            "action_intent": None,
+        }
 
     def _resolve_ordinal_open(
         self,

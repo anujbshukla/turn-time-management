@@ -5,13 +5,17 @@ from app.database import get_db
 from app.repositories.appointment_repository import (
     AppointmentRepository,
 )
+from app.repositories.dashboard_repository import DashboardRepository
 from app.schemas import (
     AppointmentCopilotRequest,
     AppointmentCopilotResponse,
+    GlobalCopilotRequest,
+    GlobalCopilotResponse,
 )
 from app.services.copilot_service import (
     CopilotService,
 )
+from app.services.global_copilot_service import GlobalCopilotService
 
 
 router = APIRouter(
@@ -43,3 +47,20 @@ def ask_appointment_copilot(
         appt_id=appt_id,
         payload=payload,
     )
+
+@router.post(
+    "/global/ask",
+    response_model=GlobalCopilotResponse,
+)
+def ask_universal_copilot(
+    payload: GlobalCopilotRequest,
+    db: Session = Depends(get_db),
+) -> GlobalCopilotResponse:
+    """Universal, data-aware Global Copilot endpoint.
+
+    This preserves the existing appointment-scoped Copilot while exposing the
+    warehouse-wide analytical agent through the Copilot API namespace.
+    """
+    repository = DashboardRepository(db)
+    service = GlobalCopilotService(repository)
+    return GlobalCopilotResponse(**service.answer(payload))

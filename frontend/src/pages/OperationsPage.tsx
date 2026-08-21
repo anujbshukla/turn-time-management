@@ -100,6 +100,11 @@ export function OperationsPage({
   const [activeTab, setActiveTab] = useState<OperationsTab>("operations");
   const [aiWorkspaceExpanded, setAiWorkspaceExpanded] = useState(true);
   const [capacityView, setCapacityView] = useState<"dock-utilization" | "risk-heatmap">("dock-utilization");
+  const [dashboardWhatIfRequest, setDashboardWhatIfRequest] = useState<{
+    extra_loaders: number;
+    extra_forklifts: number;
+    pre_stage_products: boolean;
+  } | null>(null);
 
   const {
     appointments,
@@ -149,9 +154,9 @@ export function OperationsPage({
     : filterOptions.carriers;
   const availableAppointmentTypes = filterOptionsLoading
     ? [
-        { id: "Inbound", label: "Inbound", facility_id: null },
-        { id: "Outbound", label: "Outbound", facility_id: null },
-      ]
+      { id: "Inbound", label: "Inbound", facility_id: null },
+      { id: "Outbound", label: "Outbound", facility_id: null },
+    ]
     : filterOptions.appointmentTypes;
 
   const {
@@ -239,6 +244,29 @@ export function OperationsPage({
     run: runDashboardSimulation,
     reset: resetDashboardSimulation,
   } = useDashboardWhatIf();
+
+  function runWhatIfScenario(request: {
+    extra_loaders: number;
+    extra_forklifts: number;
+    pre_stage_products: boolean;
+  }) {
+    setDashboardWhatIfRequest(request);
+
+    void runDashboardSimulation({
+      ...request,
+      facility_id: facilityId,
+      customer_id: globalFilters.customerId,
+      carrier_id: globalFilters.carrierId,
+      appointment_type: globalFilters.appointmentType,
+      date_from: activeDateRange.dateFrom,
+      date_to: activeDateRange.dateTo,
+    });
+  }
+
+  function resetWhatIfScenario() {
+    setDashboardWhatIfRequest(null);
+    resetDashboardSimulation();
+  }
 
   useEffect(() => {
     if (filterOptionsLoading) return;
@@ -350,21 +378,21 @@ export function OperationsPage({
   const displayedDashboard =
     dashboard && dashboardSimulation
       ? {
-          ...dashboard,
-          summary: {
-            ...dashboard.summary,
-            ...dashboardSimulation.dashboard_patch.summary,
-          },
-          late_appointment_outcomes:
-            dashboardSimulation.dashboard_patch
-              .late_appointment_outcomes,
-          risk_distribution:
-            dashboardSimulation.dashboard_patch
-              .risk_distribution,
-          recommendation_savings:
-            dashboardSimulation.dashboard_patch
-              .recommendation_savings,
-        }
+        ...dashboard,
+        summary: {
+          ...dashboard.summary,
+          ...dashboardSimulation.dashboard_patch.summary,
+        },
+        late_appointment_outcomes:
+          dashboardSimulation.dashboard_patch
+            .late_appointment_outcomes,
+        risk_distribution:
+          dashboardSimulation.dashboard_patch
+            .risk_distribution,
+        recommendation_savings:
+          dashboardSimulation.dashboard_patch
+            .recommendation_savings,
+      }
       : dashboard;
 
   function openTabAndScroll(
@@ -391,6 +419,11 @@ export function OperationsPage({
           : riskLevel,
       outcome: undefined,
     }));
+
+    openTabAndScroll(
+      "operations",
+      ".appointment-operations-full",
+    );
   }
 
   function handleOutcomeSelect(
@@ -537,16 +570,10 @@ export function OperationsPage({
                 );
               }}
               onRunWhatIf={() => {
-                void runDashboardSimulation({
+                runWhatIfScenario({
                   extra_loaders: 1,
                   extra_forklifts: 1,
                   pre_stage_products: false,
-                  facility_id: facilityId,
-                  customer_id: globalFilters.customerId,
-                  carrier_id: globalFilters.carrierId,
-                  appointment_type: globalFilters.appointmentType,
-                  date_from: activeDateRange.dateFrom,
-                  date_to: activeDateRange.dateTo,
                 });
                 openTabAndScroll("predictions", ".live-what-if-panel");
               }}
@@ -611,31 +638,31 @@ export function OperationsPage({
             <section className="kpi-grid intelligent-kpi-grid">
               {displayedDashboard?.intelligent_kpis?.length
                 ? displayedDashboard.intelligent_kpis.map((kpi, index) => (
-                    <IntelligentKpiCard
-                      key={kpi.key}
-                      kpi={kpi}
-                      index={index}
-                      expanded={kpiCardsExpanded}
-                      onToggleExpanded={() =>
-                        setKpiCardsExpanded((current) => !current)
-                      }
-                      onDrillDown={handleKpiDrillDown}
-                      averageLabel={
-                        globalFilters.datePreset === "custom"
-                          ? "Average"
-                          : "7-day avg"
-                      }
-                    />
-                  ))
+                  <IntelligentKpiCard
+                    key={kpi.key}
+                    kpi={kpi}
+                    index={index}
+                    expanded={kpiCardsExpanded}
+                    onToggleExpanded={() =>
+                      setKpiCardsExpanded((current) => !current)
+                    }
+                    onDrillDown={handleKpiDrillDown}
+                    averageLabel={
+                      globalFilters.datePreset === "custom"
+                        ? "Average"
+                        : "7-day avg"
+                    }
+                  />
+                ))
                 : dashboardKpis.map((kpi, index) => (
-                    <KpiCard
-                      key={kpi.label}
-                      index={index}
-                      label={kpi.label}
-                      value={kpi.value}
-                      detail={kpi.detail}
-                    />
-                  ))}
+                  <KpiCard
+                    key={kpi.label}
+                    index={index}
+                    label={kpi.label}
+                    value={kpi.value}
+                    detail={kpi.detail}
+                  />
+                ))}
             </section>
 
             <SectionHeading
@@ -676,7 +703,7 @@ export function OperationsPage({
                     openTabAndScroll("operations", ".appointment-operations-full");
                   }}
                   onRunWhatIf={() => {
-                    void runDashboardSimulation({
+                    runWhatIfScenario({
                       extra_loaders: 1,
                       extra_forklifts: 1,
                       pre_stage_products: true,
@@ -687,20 +714,29 @@ export function OperationsPage({
               </div>
             )}
 
-            {(appointmentFilters.riskLevel || appointmentFilters.outcome) && (
-              <div className="active-filter-banner">
-                <div>
-                  <strong>Appointment filter:</strong>{" "}
-                  {appointmentFilters.riskLevel
-                    ? `${appointmentFilters.riskLevel} risk`
-                    : appointmentFilters.outcome}
-                </div>
+            {(
+              appointmentFilters.dockId ||
+              appointmentFilters.riskLevel ||
+              appointmentFilters.outcome
+            ) && (
+                <div className="active-filter-banner">
+                  <div>
+                    <strong>Appointment filter:</strong>{" "}
+                    {appointmentFilters.dockId
+                      ? `Dock ${appointmentFilters.dockId.split("-D").pop()}`
+                      : appointmentFilters.riskLevel
+                        ? `${appointmentFilters.riskLevel} risk`
+                        : appointmentFilters.outcome}
+                  </div>
 
-                <button type="button" onClick={clearAppointmentFilters}>
-                  Clear filter
-                </button>
-              </div>
-            )}
+                  <button
+                    type="button"
+                    onClick={clearAppointmentFilters}
+                  >
+                    Clear filter
+                  </button>
+                </div>
+              )}
 
             <SectionHeading
               eyebrow="Execution workspace"
@@ -751,76 +787,85 @@ export function OperationsPage({
 
               {aiWorkspaceExpanded && (
                 <div className="recommendations-action-row">
-              {displayedDashboard && (
-              <AiMissionCenter
-                missions={displayedDashboard.ai_missions ?? []}
-                onFilterQueue={(riskLevel) => {
-                  setAppointmentFilters((current) => ({
-                    ...current,
-                    riskLevel,
-                    outcome: undefined,
-                  }));
-                  openTabAndScroll("operations", ".appointment-operations-full");
-                }}
-                onOpenAppointment={(appointmentId) => {
-                  const existing = appointments.find(
-                    (appointment) => appointment.appt_id === appointmentId,
-                  );
-                  setSelectedAppointment(
-                    existing ?? createAppointmentPlaceholder(appointmentId),
-                  );
-                }}
-                onRunWhatIf={() => {
-                  void runDashboardSimulation({
-                    extra_loaders: 1,
-                    extra_forklifts: 1,
-                    pre_stage_products: true,
-                  });
-                  openTabAndScroll("predictions", ".live-what-if-panel");
-                }}
-              />
-            )}
+                  {displayedDashboard && (
+                    <AiMissionCenter
+                      missions={displayedDashboard.ai_missions ?? []}
+                      onFilterQueue={(riskLevel) => {
+                        setAppointmentFilters((current) => ({
+                          ...current,
+                          riskLevel,
+                          outcome: undefined,
+                        }));
+                        openTabAndScroll("operations", ".appointment-operations-full");
+                      }}
+                      onOpenAppointment={(appointmentId) => {
+                        const existing = appointments.find(
+                          (appointment) => appointment.appt_id === appointmentId,
+                        );
+                        setSelectedAppointment(
+                          existing ?? createAppointmentPlaceholder(appointmentId),
+                        );
+                      }}
+                      onRunWhatIf={() => {
+                        runWhatIfScenario({
+                          extra_loaders: 1,
+                          extra_forklifts: 1,
+                          pre_stage_products: true,
+                        });
+                        openTabAndScroll("predictions", ".live-what-if-panel");
+                      }}
+                    />
+                  )}
 
-              {displayedDashboard && (
-              <AiActionCardsPanel
-                missions={displayedDashboard.ai_missions ?? []}
-                alerts={displayedDashboard.operational_alerts ?? []}
-                predictiveTimeline={displayedDashboard.predictive_timeline ?? null}
-                onOpenAppointment={(appointmentId) => {
-                  const existing = appointments.find(
-                    (appointment) => appointment.appt_id === appointmentId,
-                  );
-                  setSelectedAppointment(
-                    existing ?? createAppointmentPlaceholder(appointmentId),
-                  );
-                }}
-                onFilterQueue={(riskLevel) => {
-                  setAppointmentFilters((current) => ({
-                    ...current,
-                    riskLevel,
-                    outcome: undefined,
-                  }));
-                  openTabAndScroll("operations", ".appointment-operations-full");
-                }}
-                onRunWhatIf={() => {
-                  void runDashboardSimulation({
-                    extra_loaders: 1,
-                    extra_forklifts: 1,
-                    pre_stage_products: true,
-                  });
-                  openTabAndScroll("predictions", ".live-what-if-panel");
-                }}
-                onForecast={() => {
-                  document.querySelector(".predictive-timeline-panel")?.scrollIntoView({
-                    behavior: "smooth",
-                    block: "start",
-                  });
-                }}
-                onCompare={() => {
-                  openTabAndScroll("operations", ".outcome-feed-layout");
-                }}
-              />
-            )}
+                  {displayedDashboard && (
+                    <AiActionCardsPanel
+                      missions={displayedDashboard.ai_missions ?? []}
+                      alerts={displayedDashboard.operational_alerts ?? []}
+                      predictiveTimeline={displayedDashboard.predictive_timeline ?? null}
+                      onOpenAppointment={(appointmentId) => {
+                        const existing = appointments.find(
+                          (appointment) => appointment.appt_id === appointmentId,
+                        );
+                        setSelectedAppointment(
+                          existing ?? createAppointmentPlaceholder(appointmentId),
+                        );
+                      }}
+                      onFilterQueue={(riskLevel) => {
+                        setAppointmentFilters((current) => ({
+                          ...current,
+                          riskLevel,
+                          outcome: undefined,
+                        }));
+                        openTabAndScroll("operations", ".appointment-operations-full");
+                      }}
+                      onRunWhatIf={() => {
+                        runWhatIfScenario({
+                          extra_loaders: 1,
+                          extra_forklifts: 1,
+                          pre_stage_products: true,
+                        });
+                        openTabAndScroll("predictions", ".live-what-if-panel");
+                      }}
+                      onForecast={() => {
+                        document.querySelector(".predictive-timeline-panel")?.scrollIntoView({
+                          behavior: "smooth",
+                          block: "start",
+                        });
+                      }}
+                      onCompare={(riskLevel) => {
+                        setAppointmentFilters((current) => ({
+                          ...current,
+                          riskLevel,
+                          outcome: undefined,
+                        }));
+
+                        openTabAndScroll(
+                          "operations",
+                          ".outcome-feed-layout",
+                        );
+                      }}
+                    />
+                  )}
 
                 </div>
               )}
@@ -848,7 +893,7 @@ export function OperationsPage({
                   );
                 }}
                 onRunWhatIf={() => {
-                  void runDashboardSimulation({
+                  runWhatIfScenario({
                     extra_loaders: 1,
                     extra_forklifts: 1,
                     pre_stage_products: true,
@@ -966,18 +1011,9 @@ export function OperationsPage({
                   simulation={dashboardSimulation}
                   loading={dashboardSimulationLoading}
                   error={dashboardSimulationError}
-                  onRun={(request) => {
-                    void runDashboardSimulation({
-                      ...request,
-                      facility_id: facilityId,
-                      customer_id: globalFilters.customerId,
-                      carrier_id: globalFilters.carrierId,
-                      appointment_type: globalFilters.appointmentType,
-                      date_from: activeDateRange.dateFrom,
-                      date_to: activeDateRange.dateTo,
-                    });
-                  }}
-                  onReset={resetDashboardSimulation}
+                  initialRequest={dashboardWhatIfRequest}
+                  onRun={runWhatIfScenario}
+                  onReset={resetWhatIfScenario}
                 />
 
                 {dashboardSimulation && (
@@ -989,7 +1025,7 @@ export function OperationsPage({
                         <span>KPI cards, outcome charts, risk distribution and savings now show projected values.</span>
                       </div>
                     </div>
-                    <button type="button" onClick={resetDashboardSimulation}>Return to live baseline</button>
+                    <button type="button" onClick={resetWhatIfScenario}>Return to live baseline</button>
                   </div>
                 )}
               </CollapsibleDashboardSection>
@@ -1078,16 +1114,21 @@ export function OperationsPage({
                         existing ?? createAppointmentPlaceholder(appointmentId),
                       );
                     }}
-                    onFilterRisk={(riskLevel) => {
+                    onFilterDock={(dockId) => {
                       setAppointmentFilters((current) => ({
                         ...current,
-                        riskLevel,
+                        dockId,
+                        riskLevel: undefined,
                         outcome: undefined,
                       }));
-                      openTabAndScroll("operations", ".appointment-operations-full");
+
+                      openTabAndScroll(
+                        "operations",
+                        ".appointment-operations-full",
+                      );
                     }}
                     onRunWhatIf={() => {
-                      void runDashboardSimulation({
+                      runWhatIfScenario({
                         extra_loaders: 1,
                         extra_forklifts: 1,
                         pre_stage_products: true,
@@ -1117,7 +1158,7 @@ export function OperationsPage({
             );
           }}
           onRunWhatIf={(request) => {
-            void runDashboardSimulation(request);
+            runWhatIfScenario(request);
             openTabAndScroll("predictions", ".live-what-if-panel");
           }}
           onAppointmentCreated={async (result: CreateAppointmentResponse) => {

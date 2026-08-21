@@ -227,11 +227,11 @@ export interface AiMission {
   title: string;
   objective: string;
   status:
-    | "Proposed"
-    | "Accepted"
-    | "In Progress"
-    | "Completed"
-    | "Dismissed";
+  | "Proposed"
+  | "Accepted"
+  | "In Progress"
+  | "Completed"
+  | "Dismissed";
   priority_score: number;
   impacted_appointment_count: number;
   appointment_ids: string[];
@@ -302,11 +302,11 @@ export interface OptimizationMissionExecution {
   database_mission_id?: number;
   facility_id: string;
   status:
-    | "Proposed"
-    | "Accepted"
-    | "In Progress"
-    | "Completed"
-    | "Dismissed";
+  | "Proposed"
+  | "Accepted"
+  | "In Progress"
+  | "Completed"
+  | "Dismissed";
   accepted_at?: string | null;
   started_at?: string | null;
   completed_at?: string | null;
@@ -580,12 +580,20 @@ export interface GlobalCopilotBookingDraft {
 export interface GlobalCopilotConversationMessage {
   role: "user" | "assistant";
   content: string;
+  canonical_query_state?: Record<string, unknown> | null;
 }
 
 export interface GlobalCopilotRequest {
   question: string;
   conversation_history: GlobalCopilotConversationMessage[];
   facility_id?: string;
+  customer_id?: string;
+  carrier_id?: string;
+  appointment_type?: "Inbound" | "Outbound";
+  status?: string;
+  risk_level?: string;
+  date_from?: string;
+  date_to?: string;
   booking_draft?: GlobalCopilotBookingDraft | null;
 }
 
@@ -617,6 +625,16 @@ export interface GlobalCopilotResponse {
   suggested_questions: string[];
   quick_actions: GlobalCopilotQuickAction[];
   action_intent: GlobalCopilotActionIntent | null;
+
+  /**
+   * Structured analytical state returned by the backend.
+   *
+   * This is stored with assistant messages and sent back through
+   * conversation_history so follow-up questions can preserve the
+   * previous metric, grouping, filters, time window and other
+   * analytical context.
+   */
+  canonical_query_state?: Record<string, unknown> | null;
 }
 
 

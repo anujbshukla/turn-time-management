@@ -19,6 +19,14 @@ export interface AppointmentListItem {
 
   status: string;
 
+  original_scheduled_time: string | null;
+  is_rescheduled: boolean;
+  reschedule_count: number;
+  rescheduled_at: string | null;
+
+  edit_count: number;
+  last_edited_at: string | null;
+
   pallet_count: number;
   sku_count: number;
 
@@ -61,6 +69,7 @@ export type AppointmentSortField =
   | "facility_name"
   | "carrier_name"
   | "scheduled_time"
+  | "estimated_arrival_time"
   | "status"
   | "turn_risk_score";
 
@@ -209,4 +218,26 @@ export interface UpdateAppointmentPayload {
 export interface UpdateAppointmentResponse
   extends CreateAppointmentResponse {
   changed_fields: string[];
+}
+
+export interface RescheduleAppointmentPayload {
+  scheduled_time: string;
+  reason: string;
+}
+
+export interface RescheduleAppointmentResponse {
+  appt_id: string;
+  previous_scheduled_time: string;
+  scheduled_time: string;
+  estimated_arrival_time: string | null;
+  original_scheduled_time: string;
+  is_rescheduled: boolean;
+  reschedule_count: number;
+  rescheduled_at: string;
+  prediction: Record<string, unknown> | null;
+  scoring_status:
+  | "scored"
+  | "model_unavailable"
+  | "failed";
+  message: string;
 }

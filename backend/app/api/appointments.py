@@ -14,6 +14,8 @@ from app.schemas import (
     AppointmentCreatedResponse,
     AppointmentReferenceData,
     AppointmentResponse,
+    AppointmentRescheduleRequest,
+    AppointmentRescheduleResponse,
     AppointmentUpdate,
     AppointmentUpdatedResponse,
     WhatIfRequest,
@@ -21,6 +23,9 @@ from app.schemas import (
 )
 from app.services.appointment_service import (
     AppointmentService,
+)
+from app.services.demo_appointment_lifecycle_service import (
+    DemoAppointmentLifecycleService,
 )
 
 
@@ -33,6 +38,8 @@ router = APIRouter(
 def get_appointment_service(
     db: Session = Depends(get_db),
 ) -> AppointmentService:
+    DemoAppointmentLifecycleService(db).reconcile()
+
     repository = AppointmentRepository(db)
 
     return AppointmentService(repository)
@@ -226,6 +233,18 @@ def get_appointment(
     ),
 ) -> Appointment:
     return service.get_by_id(appt_id)
+
+
+@router.post(
+    "/{appt_id}/reschedule",
+    response_model=AppointmentRescheduleResponse,
+)
+def reschedule_appointment(
+    appt_id: str,
+    payload: AppointmentRescheduleRequest,
+    service: AppointmentService = Depends(get_appointment_service),
+) -> dict[str, Any]:
+    return service.reschedule(appt_id, payload)
 
 
 @router.patch(

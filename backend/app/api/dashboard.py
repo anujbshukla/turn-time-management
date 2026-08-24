@@ -7,6 +7,9 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.repositories.dashboard_repository import DashboardRepository
 from app.services.dashboard_service import DashboardService
+from app.services.demo_appointment_lifecycle_service import (
+    DemoAppointmentLifecycleService,
+)
 from app.services.dashboard_filter_scope import (
     DashboardFilterScope,
     scoped_appointments,
@@ -56,6 +59,8 @@ def get_dashboard(
     date_to: date | None = Query(default=None),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
+    DemoAppointmentLifecycleService(db).reconcile()
+
     repository = DashboardRepository(db)
     service = DashboardService(repository)
 

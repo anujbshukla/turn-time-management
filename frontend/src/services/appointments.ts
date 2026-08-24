@@ -5,6 +5,8 @@ import type {
   CreateAppointmentPayload,
   CreateAppointmentResponse,
   PaginatedAppointmentsResponse,
+  RescheduleAppointmentPayload,
+  RescheduleAppointmentResponse,
   UpdateAppointmentPayload,
   UpdateAppointmentResponse,
 } from "../types/appointments";
@@ -250,5 +252,36 @@ export async function updateAppointment(
     }
     throw new Error(message);
   }
+  return response.json();
+}
+
+
+export async function rescheduleAppointment(
+  appointmentId: string,
+  payload: RescheduleAppointmentPayload,
+): Promise<RescheduleAppointmentResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/appointments/${appointmentId}/reschedule`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  if (!response.ok) {
+    const rawBody = await response.text();
+    let message = `Unable to reschedule appointment: ${response.status}`;
+    if (rawBody) {
+      try {
+        const body = JSON.parse(rawBody);
+        message = body?.message ?? body?.detail ?? message;
+      } catch {
+        message = rawBody;
+      }
+    }
+    throw new Error(message);
+  }
+
   return response.json();
 }

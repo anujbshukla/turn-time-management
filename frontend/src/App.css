@@ -656,12 +656,32 @@ h1 {
   cursor: default;
 }
 
+.intelligent-kpi-secondary-metric {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-top: 6px;
+  color: #738099;
+  font-size: 12px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.intelligent-kpi-secondary-metric strong {
+  display: inline;
+  margin: 0;
+  color: #344057;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: inherit;
+}
+
 .appointment-drawer {
   position: fixed;
   z-index: 51;
   top: 0;
   right: 0;
-  width: min(520px, 94vw);
+  width: min(860px, 94vw);
   height: 100vh;
   overflow-y: auto;
   border-left: 1px solid #dfe4ec;
@@ -12094,3 +12114,394 @@ h1 {
 }
 
 /* END UI CONSISTENCY PATCH 2026-08-17 */
+
+/* Appointment operational intelligence */
+.appointment-intelligence {
+  display: grid;
+  gap: 14px;
+  margin: 14px 0
+}
+
+.live-sla-card {
+  display: grid;
+  gap: 3px;
+  padding: 15px 16px;
+  border: 1px solid #d7deea;
+  border-radius: 12px;
+  background: #f8fafc
+}
+
+.live-sla-card>span {
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  font-size: 10px;
+  font-weight: 800;
+  color: #68758b
+}
+
+.live-sla-card>strong {
+  font-size: 25px;
+  line-height: 1.1
+}
+
+.live-sla-card>small {
+  color: #68758b
+}
+
+.live-sla-card.good {
+  border-color: #b9dfcc;
+  background: #f4fbf7
+}
+
+.live-sla-card.warn {
+  border-color: #ecd49d;
+  background: #fffaf0
+}
+
+.live-sla-card.bad {
+  border-color: #efb7b7;
+  background: #fff6f6
+}
+
+.operational-intelligence-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px
+}
+
+.intelligence-card {
+  border: 1px solid #e0e5ed;
+  border-radius: 10px;
+  padding: 13px;
+  background: #fff
+}
+
+.intelligence-card dl {
+  display: grid;
+  gap: 7px;
+  margin: 9px 0 0
+}
+
+.intelligence-card dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px
+}
+
+.intelligence-card dt {
+  color: #738097;
+  font-size: 11px
+}
+
+.intelligence-card dd {
+  margin: 0;
+  text-align: right;
+  font-size: 11px;
+  font-weight: 700;
+  color: #344057
+}
+
+.operational-timeline-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px
+}
+
+.operational-timeline-grid div {
+  display: grid;
+  gap: 4px;
+  padding: 9px;
+  border-radius: 8px;
+  background: #f7f9fc
+}
+
+.operational-timeline-grid span {
+  font-size: 10px;
+  color: #738097
+}
+
+.operational-timeline-grid strong {
+  font-size: 11px
+}
+
+.sla-explanation-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  align-items: flex-start
+}
+
+.sla-explanation-heading h4 {
+  margin: 3px 0 0
+}
+
+.sla-explanation-card>p {
+  font-size: 12px;
+  line-height: 1.55;
+  color: #47546a
+}
+
+.risk-contributor-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px
+}
+
+.risk-contributor-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid #edf0f4
+}
+
+.risk-contributor-row div {
+  display: grid;
+  gap: 2px
+}
+
+.risk-contributor-row small,
+.explainability-note {
+  color: #768399
+}
+
+.risk-contributor-row>span {
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap
+}
+
+.shipment-items-table-wrap {
+  overflow: auto;
+  margin-top: 9px
+}
+
+.shipment-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px
+}
+
+.shipment-items-table th,
+.shipment-items-table td {
+  padding: 8px;
+  border-bottom: 1px solid #edf0f4;
+  text-align: left;
+  white-space: nowrap
+}
+
+.shipment-items-table td:first-child {
+  white-space: normal
+}
+
+.shipment-items-table td:first-child small {
+  display: block;
+  color: #768399
+}
+
+.action-recommendation-reason {
+  margin-top: 8px;
+  padding: 9px 10px;
+  border-left: 3px solid #3158a5;
+  border-radius: 6px;
+  background: #f5f8fd;
+  font-size: 11px !important;
+  line-height: 1.45;
+  color: #44516a !important
+}
+
+.action-recommendation-reason strong {
+  color: #25324a
+}
+
+@media(max-width:900px) {
+  .operational-intelligence-grid {
+    grid-template-columns: 1fr
+  }
+
+  .operational-timeline-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr))
+  }
+}
+
+/* Turn time KPI follow-up */
+.turn-time-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 900px) {
+  .turn-time-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Appointment drawer requested layout - 2026-08-21 */
+.appointment-operational-intelligence-section {
+  display: block;
+}
+
+.operational-snapshot-card {
+  margin-top: 12px;
+}
+
+.operational-snapshot-card .details-grid {
+  margin-top: 10px;
+}
+
+.shipment-items-section .drawer-section-heading {
+  align-items: flex-start;
+}
+
+.shipment-line-count {
+  color: #7c879b;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.shipment-items-section .shipment-items-card {
+  margin-top: 12px;
+}
+
+.shipment-items-section .shipment-items-table-wrap {
+  overflow-x: auto;
+}
+
+.shipment-items-section .shipment-items-table {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: collapse;
+}
+
+.shipment-items-section .shipment-items-table th,
+.shipment-items-section .shipment-items-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #e5eaf2;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.shipment-items-section .shipment-items-table th {
+  color: #344057;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.shipment-items-section .shipment-items-table td {
+  color: #344057;
+  font-size: 12px;
+}
+
+.shipment-items-section .shipment-items-table td:first-child {
+  min-width: 180px;
+}
+
+.shipment-items-section .shipment-items-table td strong,
+.shipment-items-section .shipment-items-table td small {
+  display: block;
+}
+
+.shipment-items-section .shipment-items-table td small {
+  margin-top: 2px;
+  color: #7c879b;
+  font-size: 10px;
+}
+
+/* APPOINTMENT EDIT / RESCHEDULE WORKFLOWS */
+.appointment-drawer-header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.appointment-drawer-action {
+    min-height: 36px;
+    white-space: nowrap;
+}
+
+.appointment-change-drawer,
+.reschedule-appointment-drawer {
+    z-index: 1300;
+}
+
+.appointment-change-backdrop {
+    z-index: 1290;
+}
+
+.appointment-change-notice {
+    margin: 0 0 16px;
+    padding: 10px 12px;
+    border: 1px solid #d7deea;
+    border-radius: 8px;
+    background: #f7f9fc;
+    color: #5f6f88;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.reschedule-appointment-form {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    overflow: auto;
+    padding: 18px;
+}
+
+.reschedule-current-time {
+    margin-top: 8px;
+    font-size: 18px;
+    font-weight: 750;
+    color: #16233a;
+}
+
+.reschedule-reason-field {
+    grid-column: 1 / -1;
+}
+
+.reschedule-reason-field textarea {
+    width: 100%;
+    resize: vertical;
+    min-height: 92px;
+    box-sizing: border-box;
+    border: 1px solid #d7deea;
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: #17233a;
+    background: #ffffff;
+    font: inherit;
+}
+
+.appointment-change-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding: 0 9px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 750;
+    white-space: nowrap;
+    border: 1px solid transparent;
+}
+
+.appointment-change-badge.original {
+    color: #63718a;
+    background: #f1f4f8;
+    border-color: #e0e5ed;
+}
+
+.appointment-change-badge.edited {
+    color: #3158a5;
+    background: #eef4ff;
+    border-color: #d9e5fb;
+}
+
+.appointment-change-badge.rescheduled {
+    color: #8a5a0a;
+    background: #fff7df;
+    border-color: #f2df9c;
+}

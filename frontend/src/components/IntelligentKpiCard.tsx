@@ -10,6 +10,10 @@ type Props = {
   onToggleExpanded: () => void;
   onDrillDown?: (key: string) => void;
   averageLabel?: string;
+  secondaryMetric?: {
+    label: string;
+    value: number;
+  };
 };
 
 export function IntelligentKpiCard({
@@ -19,18 +23,15 @@ export function IntelligentKpiCard({
   onToggleExpanded,
   onDrillDown,
   averageLabel = "7-day avg",
+  secondaryMetric,
 }: Props) {
   const [explanationOpen, setExplanationOpen] = useState(false);
+
   const trendData = kpi.trend.map((value, point) => ({
     point,
     value,
     date: kpi.trend_dates?.[point] ?? "",
   }));
-  const targetProgress = kpi.target == null
-    ? null
-    : Math.min(100, Math.max(0, kpi.target === 0
-      ? (kpi.value === 0 ? 100 : 0)
-      : (kpi.value / kpi.target) * 100));
 
   return (
     <article
@@ -47,10 +48,12 @@ export function IntelligentKpiCard({
     >
       <div className="kpi-card-topline">
         <span>{kpi.label}</span>
+
         <div className="kpi-card-heading-actions">
           <span className="kpi-card-index" aria-hidden="true">
             {String(index + 1).padStart(2, "0")}
           </span>
+
           <button
             type="button"
             className="kpi-card-expand-button"
@@ -73,6 +76,7 @@ export function IntelligentKpiCard({
 
       <div className="intelligent-kpi-value-row">
         <strong>{formatValue(kpi.value, kpi.format)}</strong>
+
         {expanded && (
           <span className={`intelligent-kpi-delta ${kpi.tone}`}>
             <span aria-hidden="true">{directionIcon(kpi.direction)}</span>
@@ -81,11 +85,21 @@ export function IntelligentKpiCard({
         )}
       </div>
 
+      {secondaryMetric && (
+        <small className="intelligent-kpi-secondary-metric">
+          {secondaryMetric.label}:{" "}
+          <strong>{Math.round(secondaryMetric.value).toLocaleString()}</strong>
+        </small>
+      )}
+
       {expanded && (
         <div className="intelligent-kpi-expanded-content">
           <small>{kpi.detail}</small>
 
-          <div className="intelligent-kpi-sparkline" aria-label={`${kpi.label} 14-day trend`}>
+          <div
+            className="intelligent-kpi-sparkline"
+            aria-label={`${kpi.label} 14-day trend`}
+          >
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trendData}>
                 <Tooltip
@@ -96,7 +110,9 @@ export function IntelligentKpiCard({
                   ]}
                   labelFormatter={(_, payload) => {
                     const rawDate = payload?.[0]?.payload?.date;
+
                     if (!rawDate) return "";
+
                     return new Intl.DateTimeFormat(undefined, {
                       month: "short",
                       day: "numeric",
@@ -104,6 +120,7 @@ export function IntelligentKpiCard({
                     }).format(new Date(`${rawDate}T00:00:00`));
                   }}
                 />
+
                 <Line
                   type="monotone"
                   dataKey="value"
@@ -117,24 +134,23 @@ export function IntelligentKpiCard({
           </div>
 
           <div className="intelligent-kpi-comparison">
-            <span>Yesterday <strong>{formatValue(kpi.previous_value, kpi.format)}</strong></span>
-            <span>{averageLabel} <strong>{formatValue(kpi.rolling_average, kpi.format)}</strong></span>
+            <span>
+              Yesterday{" "}
+              <strong>{formatValue(kpi.previous_value, kpi.format)}</strong>
+            </span>
+
+            <span>
+              {averageLabel}{" "}
+              <strong>{formatValue(kpi.rolling_average, kpi.format)}</strong>
+            </span>
           </div>
 
-          {targetProgress !== null && (
-            <div className="intelligent-kpi-target">
-              <div>
-                <span>Target</span>
-                <strong>{formatValue(kpi.target ?? 0, kpi.format)}</strong>
-              </div>
-              <div className="intelligent-kpi-target-track" aria-hidden="true">
-                <span style={{ width: `${targetProgress}%` }} />
-              </div>
-            </div>
-          )}
-
           <div className="intelligent-kpi-footer">
-            <span>Forecast {formatValue(kpi.forecast, kpi.format)} · {kpi.forecast_confidence}% confidence</span>
+            <span>
+              Forecast {formatValue(kpi.forecast, kpi.format)} ·{" "}
+              {kpi.forecast_confidence}% confidence
+            </span>
+
             <button
               type="button"
               onClick={(event) => {
@@ -147,7 +163,10 @@ export function IntelligentKpiCard({
           </div>
 
           {explanationOpen && (
-            <div className="intelligent-kpi-explanation" onClick={(event) => event.stopPropagation()}>
+            <div
+              className="intelligent-kpi-explanation"
+              onClick={(event) => event.stopPropagation()}
+            >
               <strong>AI performance note</strong>
               <p>{kpi.explanation}</p>
             </div>
@@ -160,17 +179,28 @@ export function IntelligentKpiCard({
   );
 }
 
-function formatValue(value: number, format: IntelligentKpi["format"]) {
+function formatValue(
+  value: number,
+  format: IntelligentKpi["format"],
+) {
   if (format === "currency") {
     return new Intl.NumberFormat("en-US", {
-      style: "currency", currency: "USD", maximumFractionDigits: 0,
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
     }).format(value);
   }
-  if (format === "percent") return `${Math.round(value)}%`;
+
+  if (format === "percent") {
+    return `${Math.round(value)}%`;
+  }
+
   return Math.round(value).toLocaleString();
 }
 
-function directionIcon(direction: IntelligentKpi["direction"]) {
+function directionIcon(
+  direction: IntelligentKpi["direction"],
+) {
   if (direction === "up") return "↑";
   if (direction === "down") return "↓";
   return "→";

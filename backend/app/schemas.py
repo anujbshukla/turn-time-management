@@ -100,6 +100,25 @@ class AppointmentUpdatedResponse(BaseModel):
     message: str
 
 
+class AppointmentRescheduleRequest(BaseModel):
+    scheduled_time: datetime
+    reason: str = Field(min_length=3, max_length=500)
+
+
+class AppointmentRescheduleResponse(BaseModel):
+    appt_id: str
+    previous_scheduled_time: datetime
+    scheduled_time: datetime
+    estimated_arrival_time: datetime | None = None
+    original_scheduled_time: datetime
+    is_rescheduled: bool
+    reschedule_count: int
+    rescheduled_at: datetime
+    prediction: dict | None = None
+    scoring_status: Literal["scored", "model_unavailable", "failed"]
+    message: str
+
+
 class AppointmentCreatedResponse(BaseModel):
     appt_id: str
     appointment: dict

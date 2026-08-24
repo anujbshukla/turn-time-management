@@ -8,6 +8,11 @@ from sqlalchemy.orm import Session
 
 from app.models import Appointment
 from app.repositories.outcome_rules import outcome_filter_sql
+from app.services.appointment_explainability import (
+    build_action_rationale,
+    build_risk_contributors,
+    build_sla_outcome_reason,
+)
 
 
 class AppointmentRepository:
@@ -46,6 +51,7 @@ class AppointmentRepository:
             "facility_name": "f.facility_name",
             "carrier_name": "c.carrier_name",
             "scheduled_time": "a.scheduled_time",
+            "estimated_arrival_time": "a.estimated_arrival_time",
             "status": (
                 "CASE a.status "
                 "WHEN 'Scheduled' THEN 1 "
@@ -69,7 +75,27 @@ class AppointmentRepository:
             )
         else:
             order_by_clause = (
-                "p.turn_risk_score DESC NULLS LAST, "
+                "CASE a.status "
+                "WHEN 'In Progress' THEN 1 "
+                "WHEN 'Dock Assigned' THEN 2 "
+                "WHEN 'Waiting' THEN 3 "
+                "WHEN 'Arrived' THEN 4 "
+                "WHEN 'En Route' THEN 5 "
+                "WHEN 'Scheduled' THEN 6 "
+                "WHEN 'Completed' THEN 7 "
+                "ELSE 8 "
+                "END ASC, "
+
+                "CASE "
+                "WHEN a.status IN ('En Route', 'Scheduled') "
+                "THEN ABS(EXTRACT(EPOCH FROM ("
+                "a.estimated_arrival_time - "
+                "(CURRENT_TIMESTAMP AT TIME ZONE "
+                "COALESCE(NULLIF(f.timezone, ''), 'America/New_York'))"
+                "))) "
+                "ELSE NULL "
+                "END ASC NULLS LAST, "
+
                 "a.scheduled_time ASC, "
                 "a.appt_id ASC"
             )
@@ -115,6 +141,12 @@ class AppointmentRepository:
                     a.assigned_dock_id,
                     d.dock_name,
                     a.status,
+                    a.original_scheduled_time,
+                    a.is_rescheduled,
+                    a.reschedule_count,
+                    a.rescheduled_at,
+                    a.edit_count,
+                    a.last_edited_at,
                     a.pallet_count,
                     a.sku_count,
                     a.priority,
@@ -545,9 +577,26 @@ AND (
                     a.actual_departure_time,
 
                     a.status,
+                    a.original_scheduled_time,
+                    a.is_rescheduled,
+                    a.reschedule_count,
+                    a.rescheduled_at,
+                    a.edit_count,
+                    a.last_edited_at,
                     a.appointment_type,
                     a.load_type,
                     a.trailer_number,
+                    driver.driver_name,
+                    driver.license_number,
+                    driver.license_state,
+                    driver.phone_number AS driver_phone,
+                    driver.tractor_number,
+                    a.origin_name,
+                    a.origin_city,
+                    a.origin_state,
+                    a.destination_name,
+                    a.destination_city,
+                    a.destination_state,
 
                     a.pallet_count,
                     a.sku_count,
@@ -584,6 +633,9 @@ AND (
                 LEFT JOIN customers customer
                     ON customer.customer_id =
                         a.customer_id
+
+                LEFT JOIN appointment_drivers driver
+                    ON driver.appt_id = a.appt_id
 
                 WHERE a.appt_id = :appt_id;
                 """
@@ -860,10 +912,11 @@ AND (
                 },
             ).mappings().all()
 
-            actions = [
-                dict(row)
-                for row in action_rows
-            ]
+            actions = [dict(row) for row in action_rows]
+            for action in actions:
+                action["recommendation_reason"] = build_action_rationale(
+                    action, appointment_dict, prediction_dict
+                )
 
         # Merge original operational events with
         # recovery-action decision events.
@@ -1041,6 +1094,17 @@ AND (
             else None
         )
 
+        risk_contributors = build_risk_contributors(appointment_dict, prediction_dict)
+        sla_outcome_status, sla_outcome_reason = build_sla_outcome_reason(
+            appointment_dict,
+            recommendation_used=recommendation_used,
+            accepted_minutes_saved=accepted_minutes_saved,
+            actual_sla_met=actual_sla_met,
+            actual_sla_missed=actual_sla_missed,
+            was_late=was_late,
+            sla_variance_minutes=sla_variance_minutes,
+        )
+
         return {
             "appointment": appointment_dict,
 
@@ -1116,6 +1180,9 @@ AND (
                 "accepted_action_count": len(accepted_actions),
                 "actual_turn_time_minutes": actual_turn_time,
                 "sla_variance_minutes": sla_variance_minutes,
+                "sla_outcome_status": sla_outcome_status,
+                "sla_outcome_reason": sla_outcome_reason,
+                "risk_contributors": risk_contributors,
 
                 "sla_minutes":
                     sla_minutes,
@@ -1456,7 +1523,10 @@ AND (
                 "field_name": field_name,
                 "old_value": serialize(old_value),
                 "new_value": serialize(new_value),
-                "details_json": json.dumps(details or {}),
+                "details_json": json.dumps(
+                    details or {},
+                    default=str,
+                ),
             },
         )
         self.db.commit()
@@ -1634,6 +1704,51 @@ AND (
         self.db.commit()
         self.db.refresh(appointment)
         return appointment
+
+    def reschedule_appointment(
+        self,
+        *,
+        appt_id: str,
+        scheduled_time: datetime,
+        changed_at: datetime,
+    ) -> dict[str, Any]:
+        row = self.db.execute(
+            text(
+                """
+                UPDATE appointments
+                SET
+                    original_scheduled_time = COALESCE(original_scheduled_time, scheduled_time),
+                    estimated_arrival_time =
+                        CASE
+                            WHEN estimated_arrival_time IS NULL THEN NULL
+                            ELSE estimated_arrival_time + (CAST(:scheduled_time AS TIMESTAMP) - scheduled_time)
+                        END,
+                    scheduled_time = CAST(:scheduled_time AS TIMESTAMP),
+                    appt_date = CAST(:scheduled_time AS TIMESTAMP),
+                    is_rescheduled = TRUE,
+                    reschedule_count = COALESCE(reschedule_count, 0) + 1,
+                    rescheduled_at = CAST(:changed_at AS TIMESTAMP),
+                    status = 'Scheduled',
+                    updated_at = CAST(:changed_at AS TIMESTAMP)
+                WHERE appt_id = :appt_id
+                RETURNING
+                    appt_id,
+                    original_scheduled_time,
+                    scheduled_time,
+                    estimated_arrival_time,
+                    is_rescheduled,
+                    reschedule_count,
+                    rescheduled_at;
+                """
+            ),
+            {
+                "appt_id": appt_id,
+                "scheduled_time": scheduled_time,
+                "changed_at": changed_at,
+            },
+        ).mappings().one()
+        self.db.commit()
+        return dict(row)
 
     def replace_appointment_products(
         self,

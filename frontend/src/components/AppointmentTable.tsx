@@ -106,8 +106,8 @@ export function AppointmentTable({
     pagination.total_items === 0
       ? 0
       : (pagination.page - 1) *
-          pagination.page_size +
-        1;
+      pagination.page_size +
+      1;
 
   const lastVisibleRow = Math.min(
     pagination.page * pagination.page_size,
@@ -190,7 +190,14 @@ export function AppointmentTable({
                     disabled={loading}
                     onSortChange={onSortChange}
                   />
-                  <th>Expected Arrival</th>
+                  <SortableHeader
+                    field="estimated_arrival_time"
+                    label="Expected Arrival"
+                    activeField={sortBy}
+                    direction={sortDirection}
+                    disabled={loading}
+                    onSortChange={onSortChange}
+                  />
                   <SortableHeader
                     field="status"
                     label="Status"
@@ -199,6 +206,7 @@ export function AppointmentTable({
                     disabled={loading}
                     onSortChange={onSortChange}
                   />
+                  <th>Change status</th>
                   <SortableHeader
                     field="turn_risk_score"
                     label="Risk"
@@ -283,13 +291,13 @@ export function AppointmentTable({
                       <td>
                         {appointment.estimated_arrival_time
                           ? new Date(
-                              appointment.estimated_arrival_time,
-                            ).toLocaleString([], {
-                              month: "short",
-                              day: "numeric",
-                              hour: "numeric",
-                              minute: "2-digit",
-                            })
+                            appointment.estimated_arrival_time,
+                          ).toLocaleString([], {
+                            month: "short",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })
                           : "—"}
                       </td>
                       <td>
@@ -297,6 +305,25 @@ export function AppointmentTable({
                           className={`status-badge status-${statusClass}`}
                         >
                           {appointment.status}
+                        </span>
+                      </td>
+                      <td>
+                        <span
+                          className={`appointment-change-badge ${
+                            appointment.is_rescheduled
+                              ? "rescheduled"
+                              : appointment.edit_count > 0
+                                ? "edited"
+                                : "original"
+                          }`}
+                        >
+                          {appointment.is_rescheduled && appointment.edit_count > 0
+                            ? "Rescheduled · Edited"
+                            : appointment.is_rescheduled
+                              ? "Rescheduled"
+                              : appointment.edit_count > 0
+                                ? "Edited"
+                                : "Original"}
                         </span>
                       </td>
                       <td>
@@ -313,7 +340,7 @@ export function AppointmentTable({
                 {appointments.length === 0 && (
                   <tr>
                     <td
-                      colSpan={8}
+                      colSpan={9}
                       className="empty-table-cell"
                     >
                       No appointments found.

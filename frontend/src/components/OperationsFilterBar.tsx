@@ -55,6 +55,25 @@ export function OperationsFilterBar({
     value: OperationsGlobalFilters[K],
   ) => onChange({ ...filters, [key]: value });
 
+  const activePickerRange = getPresetRange(
+    filters.datePreset,
+    filters.customDate,
+    filters.customDateEnd,
+  );
+
+  const activePickerEnd = fromLocalDate(activePickerRange.dateTo);
+  activePickerEnd.setDate(activePickerEnd.getDate() - 1);
+
+  const pickerStart =
+    filters.datePreset === "custom"
+      ? filters.customDate ?? activePickerRange.dateFrom
+      : activePickerRange.dateFrom;
+
+  const pickerEnd =
+    filters.datePreset === "custom"
+      ? filters.customDateEnd ?? pickerStart
+      : toLocalDate(activePickerEnd);
+
   return (
     <section className="operations-filter-shell compact-filter-shell" aria-label="Dashboard filters">
       <div className="operations-filter-row">
@@ -63,97 +82,59 @@ export function OperationsFilterBar({
           <strong>{datePresetLabel(filters.datePreset, filters.customDate, filters.customDateEnd)}</strong>
         </div>
 
-        {filters.datePreset === "custom" ? (
-          <div className="custom-date-range-control" aria-label="Custom operating window">
-            <div className="custom-date-range-track">
-              <label>
-                <span>From</span>
-                <input
-                  type="date"
-                  value={filters.customDate ?? todayLocalDate()}
-                  max={filters.customDateEnd}
-                  onChange={(event) => {
-                    const nextStart = event.target.value;
-                    const currentEnd = filters.customDateEnd ?? nextStart;
-                    onChange({
-                      ...filters,
-                      datePreset: "custom",
-                      customDate: nextStart,
-                      customDateEnd:
-                        currentEnd && currentEnd < nextStart
-                          ? nextStart
-                          : currentEnd,
-                    });
-                  }}
-                />
-              </label>
+        <div
+          className="custom-date-range-control"
+          aria-label="Operating date range"
+        >
+          <div className="custom-date-range-track">
+            <label>
+              <span>From</span>
+              <input
+                type="date"
+                value={pickerStart}
+                max={pickerEnd}
+                onChange={(event) => {
+                  const nextStart = event.target.value;
+                  const nextEnd =
+                    pickerEnd && pickerEnd < nextStart
+                      ? nextStart
+                      : pickerEnd;
 
-              <span className="custom-date-range-arrow" aria-hidden="true">→</span>
-
-              <label>
-                <span>To</span>
-                <input
-                  type="date"
-                  value={filters.customDateEnd ?? filters.customDate ?? todayLocalDate()}
-                  min={filters.customDate}
-                  onChange={(event) =>
-                    onChange({
-                      ...filters,
-                      datePreset: "custom",
-                      customDateEnd: event.target.value,
-                    })
-                  }
-                />
-              </label>
-            </div>
-
-            <button
-              type="button"
-              className="custom-date-back-button"
-              onClick={() =>
-                onChange({
-                  ...filters,
-                  datePreset: "today",
-                })
-              }
-            >
-              ← Back
-            </button>
-          </div>
-        ) : (
-          <div className="date-preset-tabs" role="group" aria-label="Date view">
-            {([
-              ["previous-7-days", "Previous 7 days"],
-              ["yesterday", "Yesterday"],
-              ["today", "Today"],
-              ["tomorrow", "Tomorrow"],
-              ["next-week", "Next 7 days"],
-              ["custom", "Custom date"],
-            ] as const).map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                className={`date-preset-button ${filters.datePreset === value ? "active" : ""}`}
-                onClick={() => {
-                  if (value === "custom") {
-                    const today = todayLocalDate();
-                    onChange({
-                      ...filters,
-                      datePreset: "custom",
-                      customDate: filters.customDate ?? today,
-                      customDateEnd: filters.customDateEnd ?? filters.customDate ?? today,
-                    });
-                    return;
-                  }
-
-                  update("datePreset", value);
+                  onChange({
+                    ...filters,
+                    datePreset: "custom",
+                    customDate: nextStart,
+                    customDateEnd: nextEnd,
+                  });
                 }}
-              >
-                {label}
-              </button>
-            ))}
+              />
+            </label>
+
+            <span
+              className="custom-date-range-arrow"
+              aria-hidden="true"
+            >
+              →
+            </span>
+
+            <label>
+              <span>To</span>
+              <input
+                type="date"
+                value={pickerEnd}
+                min={pickerStart}
+                onChange={(event) =>
+                  onChange({
+                    ...filters,
+                    datePreset: "custom",
+                    customDate: pickerStart,
+                    customDateEnd: event.target.value,
+                  })
+                }
+              />
+            </label>
           </div>
-        )}
+        </div>
 
         <label className="compare-control">
           <span className="filter-eyebrow">Compare</span>
@@ -211,13 +192,13 @@ export function OperationsFilterBar({
               update(
                 "appointmentType",
                 (event.target.value || undefined) as
-                  | "Inbound"
-                  | "Outbound"
-                  | undefined,
+                | "Inbound"
+                | "Outbound"
+                | undefined,
               )
             }
           >
-            <option value="">Inbound & outbound</option>
+            <option value="">All</option>
             {appointmentTypes.map((type) => (
               <option key={type.id} value={type.id}>
                 {type.label}
@@ -233,6 +214,7 @@ export function OperationsFilterBar({
             onChange({
               datePreset: "today",
               compareMode: "off",
+              appointmentType: undefined,
             })
           }
         >
@@ -318,7 +300,7 @@ export function getPresetRange(
 
   end.setDate(
     end.getDate() +
-      (preset === "next-week" || preset === "previous-7-days" ? 7 : 1),
+    (preset === "next-week" || preset === "previous-7-days" ? 7 : 1),
   );
 
   return {
@@ -395,10 +377,6 @@ function getPresetStart(preset: DatePreset, customDate?: string) {
   return start;
 }
 
-function todayLocalDate() {
-  return toLocalDate(new Date());
-}
-
 function fromLocalDate(value: string) {
   const [year, month, day] = value.split("-").map(Number);
   return new Date(year, month - 1, day);
@@ -464,7 +442,7 @@ function comparisonLabel(
     Math.round(
       (fromLocalDate(current.dateTo).getTime() -
         fromLocalDate(current.dateFrom).getTime()) /
-        86_400_000,
+      86_400_000,
     );
 
   if (mode === "same-day-last-week" && currentDurationDays === 1) {

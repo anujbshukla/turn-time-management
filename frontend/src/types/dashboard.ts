@@ -28,6 +28,7 @@ export interface DashboardSummary {
   in_progress: number;
   completed: number;
   late_arrivals: number;
+  expected_late_arrivals: number;
   sla_misses: number;
   late_turned_on_time: number;
   late_recovered_with_recommendations: number;

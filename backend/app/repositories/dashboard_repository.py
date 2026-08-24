@@ -43,7 +43,12 @@ class DashboardRepository:
                     COUNT(*) FILTER (
                         WHERE appointment.actual_arrival_delay_minutes > 0
                     ) AS late_arrivals,
-
+                    COUNT(*) FILTER (
+                        WHERE appointment.status = 'Scheduled'
+                          AND appointment.estimated_arrival_time IS NOT NULL
+                          AND appointment.estimated_arrival_time
+                              > appointment.scheduled_time
+                    ) AS expected_late_arrivals,
                     COUNT(*) FILTER (
                         WHERE ({sla_missed})
                     ) AS sla_misses,
@@ -1091,4 +1096,3 @@ class DashboardRepository:
         ).mappings().all()
 
         return [dict(row) for row in rows]
-

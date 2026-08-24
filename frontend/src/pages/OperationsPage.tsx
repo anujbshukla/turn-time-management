@@ -511,7 +511,9 @@ export function OperationsPage({
         : displayedDashboard
           ? displayedDashboard.summary.late_arrivals.toLocaleString()
           : "—",
-      detail: "Arrived after scheduled time",
+      detail: displayedDashboard
+        ? `Expected late arrivals: ${(displayedDashboard.summary.expected_late_arrivals ?? 0).toLocaleString()}`
+        : "Expected late arrivals: —",
     },
     {
       label: "SLA Misses",
@@ -637,23 +639,38 @@ export function OperationsPage({
 
             <section className="kpi-grid intelligent-kpi-grid">
               {displayedDashboard?.intelligent_kpis?.length
-                ? displayedDashboard.intelligent_kpis.map((kpi, index) => (
-                  <IntelligentKpiCard
-                    key={kpi.key}
-                    kpi={kpi}
-                    index={index}
-                    expanded={kpiCardsExpanded}
-                    onToggleExpanded={() =>
-                      setKpiCardsExpanded((current) => !current)
-                    }
-                    onDrillDown={handleKpiDrillDown}
-                    averageLabel={
-                      globalFilters.datePreset === "custom"
-                        ? "Average"
-                        : "7-day avg"
-                    }
-                  />
-                ))
+                ? displayedDashboard.intelligent_kpis.map((kpi, index) => {
+                  const isLateArrivalsKpi =
+                    kpi.key === "late_arrivals" ||
+                    kpi.label === "Late Arrivals";
+
+                  return (
+                    <IntelligentKpiCard
+                      key={kpi.key}
+                      kpi={kpi}
+                      index={index}
+                      expanded={kpiCardsExpanded}
+                      onToggleExpanded={() =>
+                        setKpiCardsExpanded((current) => !current)
+                      }
+                      onDrillDown={handleKpiDrillDown}
+                      averageLabel={
+                        globalFilters.datePreset === "custom"
+                          ? "Average"
+                          : "7-day avg"
+                      }
+                      secondaryMetric={
+                        isLateArrivalsKpi
+                          ? {
+                            label: "Expected late arrivals",
+                            value:
+                              displayedDashboard.summary.expected_late_arrivals ?? 0,
+                          }
+                          : undefined
+                      }
+                    />
+                  );
+                })
                 : dashboardKpis.map((kpi, index) => (
                   <KpiCard
                     key={kpi.label}
@@ -1208,6 +1225,12 @@ function createAppointmentPlaceholder(
     assigned_dock_id: null,
     dock_name: null,
     status: "Loading",
+    original_scheduled_time: null,
+    is_rescheduled: false,
+    reschedule_count: 0,
+    rescheduled_at: null,
+    edit_count: 0,
+    last_edited_at: null,
     pallet_count: 0,
     sku_count: 0,
     priority: 0,

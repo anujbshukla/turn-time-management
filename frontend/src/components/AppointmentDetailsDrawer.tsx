@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { useWhatIf } from "../hooks/useWhatIf";
 import { AppointmentCopilot } from "./AppointmentCopilot";
+import { EditAppointmentDialog } from "./EditAppointmentDialog";
+import { RescheduleAppointmentDialog } from "./RescheduleAppointmentDialog";
+import { AppointmentOperationalIntelligence } from "./AppointmentOperationalIntelligence";
+import { ShipmentItemsTable } from "./ShipmentItemsTable";
 import {
     updateRecommendationDecisions,
 } from "../services/recommendations";
@@ -46,10 +50,6 @@ function formatDate(
 }
 
 
-function formatTime(value: string | null | undefined) {
-    if (!value) return "—";
-    return new Date(value).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-}
 
 function formatPercent(
     value: number | null | undefined,
@@ -143,22 +143,6 @@ function formatEventType(
     );
 }
 
-function riskLevel(score: number) {
-    if (score >= 80) {
-        return "critical";
-    }
-
-    if (score >= 60) {
-        return "high";
-    }
-
-    if (score >= 30) {
-        return "medium";
-    }
-
-    return "low";
-}
-
 
 function actionResourceSummary(
     action: RecommendationAction,
@@ -239,6 +223,16 @@ export function AppointmentDetailsDrawer({
     const [
         preStageProducts,
         setPreStageProducts,
+    ] = useState(false);
+
+    const [
+        editAppointmentOpen,
+        setEditAppointmentOpen,
+    ] = useState(false);
+
+    const [
+        rescheduleAppointmentOpen,
+        setRescheduleAppointmentOpen,
     ] = useState(false);
 
     useEffect(() => {
@@ -439,14 +433,45 @@ export function AppointmentDetailsDrawer({
                         </p>
                     </div>
 
-                    <button
-                        type="button"
-                        className="drawer-close"
-                        onClick={onClose}
-                        aria-label="Close"
-                    >
-                        ×
-                    </button>
+                    <div className="appointment-drawer-header-actions">
+                        {details && (
+                            <>
+                                <button
+                                    type="button"
+                                    className="secondary-button appointment-drawer-action"
+                                    disabled={details.appointment.status === "Completed"}
+                                    onClick={() => setEditAppointmentOpen(true)}
+                                >
+                                    Edit appointment
+                                </button>
+
+                                <button
+                                    type="button"
+                                    className="secondary-button appointment-drawer-action"
+                                    disabled={
+                                        details.appointment.status === "Arrived" ||
+                                        details.appointment.status === "Waiting" ||
+                                        details.appointment.status === "Dock Assigned" ||
+                                        details.appointment.status === "In Progress" ||
+                                        details.appointment.status === "Completed" ||
+                                        Boolean(details.appointment.actual_arrival_time)
+                                    }
+                                    onClick={() => setRescheduleAppointmentOpen(true)}
+                                >
+                                    Reschedule
+                                </button>
+                            </>
+                        )}
+
+                        <button
+                            type="button"
+                            className="drawer-close"
+                            onClick={onClose}
+                            aria-label="Close"
+                        >
+                            ×
+                        </button>
+                    </div>
                 </div>
 
                 <div className="drawer-content">
@@ -464,98 +489,14 @@ export function AppointmentDetailsDrawer({
 
                     {!loading && details && (
                         <>
-                            <section className="drawer-section">
-                                <div className="drawer-section-heading">
-                                    <div>
-                                        <span className="drawer-section-label">
-                                            Operational snapshot
-                                        </span>
-
-                                        <h3>
-                                            Current appointment state
-                                        </h3>
-                                    </div>
-
-                                    <span
-                                        className={`risk-badge ${riskLevel(
-                                            score,
-                                        )}`}
-                                    >
-                                        {score} risk
-                                    </span>
-                                </div>
-
-                                <div className="details-grid">
-                                    <div>
-                                        <span>Status</span>
-                                        <strong>
-                                            {appointment?.status ??
-                                                "—"}
-                                        </strong>
-                                    </div>
-
-                                    <div>
-                                        <span>Priority</span>
-                                        <strong>
-                                            {appointment?.priority_tier ??
-                                                appointment?.priority ??
-                                                "—"}
-                                        </strong>
-                                    </div>
-
-                                    <div>
-                                        <span>Facility</span>
-                                        <strong>
-                                            {appointment?.facility_name ??
-                                                "—"}
-                                        </strong>
-                                    </div>
-
-                                    <div>
-                                        <span>Dock</span>
-                                        <strong>
-                                            {appointment?.dock_name ??
-                                                appointment
-                                                    ?.assigned_dock_id ??
-                                                "Unassigned"}
-                                        </strong>
-                                    </div>
-
-                                    <div><span>Appointment time</span><strong>{formatTime(appointment?.scheduled_time)}</strong></div>
-                                    <div><span>Expected arrival</span><strong>{formatTime(appointment?.estimated_arrival_time)}</strong></div>
-
-                                    <div>
-                                        <span>Carrier</span>
-                                        <strong>
-                                            {appointment?.carrier_name ??
-                                                "—"}
-                                        </strong>
-                                    </div>
-
-                                    <div>
-                                        <span>Trailer</span>
-                                        <strong>
-                                            {appointment?.trailer_number ??
-                                                "—"}
-                                        </strong>
-                                    </div>
-
-                                    <div>
-                                        <span>Pallets</span>
-                                        <strong>
-                                            {appointment?.pallet_count ??
-                                                0}
-                                        </strong>
-                                    </div>
-
-                                    <div>
-                                        <span>SKUs</span>
-                                        <strong>
-                                            {appointment?.sku_count ??
-                                                0}
-                                        </strong>
-                                    </div>
-                                </div>
+                            <section className="drawer-section appointment-operational-intelligence-section">
+                                {appointment && recovery && (
+                                    <AppointmentOperationalIntelligence
+                                        appointment={appointment}
+                                        prediction={prediction ?? null}
+                                        recovery={recovery}
+                                    />
+                                )}
                             </section>
 
 
@@ -925,11 +866,15 @@ export function AppointmentDetailsDrawer({
                                                         </div>
 
                                                         <p>
-                                                            {
-                                                                action
-                                                                    .action_description
-                                                            }
+                                                            {action.action_description}
                                                         </p>
+
+                                                        {action.recommendation_reason && (
+                                                            <p className="action-recommendation-reason">
+                                                                <strong>Why recommended: </strong>
+                                                                {action.recommendation_reason}
+                                                            </p>
+                                                        )}
 
                                                         <div className="action-meta">
                                                             <span>
@@ -1012,12 +957,11 @@ export function AppointmentDetailsDrawer({
 
                                     {whatIfSimulation && (
                                         <span
-                                            className={`impact-status ${
-                                                whatIfSimulation.scenario
-                                                    .sla_recovered
-                                                    ? "recovered"
-                                                    : "at-risk"
-                                            }`}
+                                            className={`impact-status ${whatIfSimulation.scenario
+                                                .sla_recovered
+                                                ? "recovered"
+                                                : "at-risk"
+                                                }`}
                                         >
                                             {whatIfSimulation.scenario
                                                 .sla_recovered
@@ -1163,23 +1107,23 @@ export function AppointmentDetailsDrawer({
                                                             .scenario
                                                             .sla_recovered
                                                             ? `${Math.max(
-                                                                  0,
-                                                                  whatIfSimulation
-                                                                      .baseline
-                                                                      .sla_minutes -
-                                                                      whatIfSimulation
-                                                                          .scenario
-                                                                          .projected_turn_time_minutes,
-                                                              )} minutes within SLA`
+                                                                0,
+                                                                whatIfSimulation
+                                                                    .baseline
+                                                                    .sla_minutes -
+                                                                whatIfSimulation
+                                                                    .scenario
+                                                                    .projected_turn_time_minutes,
+                                                            )} minutes within SLA`
                                                             : `${Math.max(
-                                                                  0,
-                                                                  whatIfSimulation
-                                                                      .scenario
-                                                                      .projected_turn_time_minutes -
-                                                                      whatIfSimulation
-                                                                          .baseline
-                                                                          .sla_minutes,
-                                                              )} minutes above SLA`}
+                                                                0,
+                                                                whatIfSimulation
+                                                                    .scenario
+                                                                    .projected_turn_time_minutes -
+                                                                whatIfSimulation
+                                                                    .baseline
+                                                                    .sla_minutes,
+                                                            )} minutes above SLA`}
                                                     </p>
                                                 </div>
                                             </div>
@@ -1288,7 +1232,7 @@ export function AppointmentDetailsDrawer({
                                                                 whatIfSimulation
                                                                     .baseline
                                                                     .sla_minutes) *
-                                                                100,
+                                                            100,
                                                         )}
                                                         %
                                                     </strong>
@@ -1296,13 +1240,12 @@ export function AppointmentDetailsDrawer({
 
                                                 <div className="sla-progress-track">
                                                     <div
-                                                        className={`sla-progress-fill ${
-                                                            whatIfSimulation
-                                                                .scenario
-                                                                .sla_recovered
-                                                                ? "recovered"
-                                                                : "at-risk"
-                                                        }`}
+                                                        className={`sla-progress-fill ${whatIfSimulation
+                                                            .scenario
+                                                            .sla_recovered
+                                                            ? "recovered"
+                                                            : "at-risk"
+                                                            }`}
                                                         style={{
                                                             width: `${Math.min(
                                                                 100,
@@ -1313,7 +1256,7 @@ export function AppointmentDetailsDrawer({
                                                                         whatIfSimulation
                                                                             .baseline
                                                                             .sla_minutes) *
-                                                                        100,
+                                                                    100,
                                                                 ),
                                                             )}%`,
                                                         }}
@@ -1410,80 +1353,9 @@ export function AppointmentDetailsDrawer({
                             </section>
 
 
-                            <section className="drawer-section">
-                                <div className="drawer-section-heading">
-                                    <div>
-                                        <span className="drawer-section-label">
-                                            Products
-                                        </span>
-
-                                        <h3>
-                                            Appointment load
-                                        </h3>
-                                    </div>
-
-                                    <span className="appointment-total">
-                                        {details.products.length}{" "}
-                                        lines
-                                    </span>
-                                </div>
-
-                                <div className="product-list">
-                                    {details.products.map(
-                                        (product) => (
-                                            <article
-                                                key={product.product_id}
-                                                className="product-card"
-                                            >
-                                                <div>
-                                                    <strong>
-                                                        {
-                                                            product.product_name
-                                                        }
-                                                    </strong>
-
-                                                    <span>
-                                                        {product.sku} ·{" "}
-                                                        {product.category}
-                                                    </span>
-                                                </div>
-
-                                                <div className="product-quantity">
-                                                    <strong>
-                                                        {
-                                                            product
-                                                                .pallet_count
-                                                        }
-                                                    </strong>
-
-                                                    <span>pallets</span>
-                                                </div>
-
-                                                <div className="product-meta">
-                                                    <span>
-                                                        {
-                                                            product
-                                                                .temperature_zone
-                                                        }
-                                                    </span>
-
-                                                    <span>
-                                                        {
-                                                            product
-                                                                .handling_type
-                                                        }
-                                                    </span>
-
-                                                    <span>
-                                                        {product.quantity}{" "}
-                                                        units
-                                                    </span>
-                                                </div>
-                                            </article>
-                                        ),
-                                    )}
-                                </div>
-                            </section>
+                            <ShipmentItemsTable
+                                products={details.products}
+                            />
 
 
                             <section className="drawer-section">
@@ -1601,6 +1473,27 @@ export function AppointmentDetailsDrawer({
                     )}
                 </div>
             </aside>
+            {details && (
+                <>
+                    <EditAppointmentDialog
+                        open={editAppointmentOpen}
+                        details={details}
+                        onClose={() =>
+                            setEditAppointmentOpen(false)
+                        }
+                        onSaved={onRefresh}
+                    />
+
+                    <RescheduleAppointmentDialog
+                        open={rescheduleAppointmentOpen}
+                        appointment={details.appointment}
+                        onClose={() =>
+                            setRescheduleAppointmentOpen(false)
+                        }
+                        onSaved={onRefresh}
+                    />
+                </>
+            )}
         </>
     );
 }

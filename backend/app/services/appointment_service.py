@@ -13,7 +13,11 @@ from app.models import Appointment
 from app.repositories.appointment_repository import (
     AppointmentRepository,
 )
-from app.schemas import AppointmentCreate, AppointmentUpdate
+from app.schemas import (
+    AppointmentCreate,
+    AppointmentRescheduleRequest,
+    AppointmentUpdate,
+)
 from app.services.prediction_orchestration_service import PredictionOrchestrationService
 
 
@@ -254,6 +258,21 @@ class AppointmentService:
         existing = self.get_by_id(appt_id)
         existing_details = self.repository.get_details(appt_id) or {}
         previous_prediction = existing_details.get("prediction")
+
+        incoming_schedule = payload.scheduled_time.replace(tzinfo=None)
+        existing_schedule = existing.scheduled_time.replace(tzinfo=None)
+
+        if incoming_schedule != existing_schedule:
+            raise AppError(
+                message=(
+                    "Scheduled time cannot be changed with Edit Appointment. "
+                    "Use the Reschedule action instead."
+                ),
+                code="USE_RESCHEDULE_WORKFLOW",
+                status_code=409,
+                details={"appt_id": appt_id},
+            )
+
         if existing.status == "Completed":
             raise AppError(
                 message="Completed appointments are read-only.",
@@ -305,6 +324,10 @@ class AppointmentService:
         old_product_signature = sorted((item["product_id"], item["quantity"]) for item in old_products)
         if new_product_signature != old_product_signature:
             changed_fields.append("products")
+
+        if changed_fields:
+            values["edit_count"] = int(getattr(existing, "edit_count", 0) or 0) + 1
+            values["last_edited_at"] = now
 
         previous_values = {
             key: getattr(existing, key, None)
@@ -458,6 +481,124 @@ class AppointmentService:
             "prediction": prediction,
             "scoring_status": scoring_status,
             "changed_fields": changed_fields,
+            "message": message,
+        })
+
+    def reschedule(
+        self,
+        appt_id: str,
+        payload: AppointmentRescheduleRequest,
+    ) -> dict[str, Any]:
+        existing = self.get_by_id(appt_id)
+
+        if existing.status in {
+            "Arrived",
+            "Waiting",
+            "Dock Assigned",
+            "In Progress",
+            "Completed",
+        } or existing.actual_arrival_time is not None:
+            raise AppError(
+                message=(
+                    "Appointments cannot be rescheduled after arrival "
+                    "or after warehouse processing has started."
+                ),
+                code="APPOINTMENT_NOT_RESCHEDULABLE",
+                status_code=409,
+                details={"appt_id": appt_id, "status": existing.status},
+            )
+
+        previous_scheduled_time = existing.scheduled_time
+        next_scheduled_time = payload.scheduled_time.replace(tzinfo=None)
+
+        if next_scheduled_time == previous_scheduled_time:
+            raise AppError(
+                message="Choose a different appointment date/time.",
+                code="SCHEDULE_UNCHANGED",
+                status_code=400,
+                details={"appt_id": appt_id},
+            )
+
+        existing_details = self.repository.get_details(appt_id) or {}
+        previous_prediction = existing_details.get("prediction")
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+
+        try:
+            updated = self.repository.reschedule_appointment(
+                appt_id=appt_id,
+                scheduled_time=next_scheduled_time,
+                changed_at=now,
+            )
+            self.repository.create_audit_event(
+                appt_id=appt_id,
+                event_type="APPOINTMENT_RESCHEDULED",
+                event_time=now,
+                notes=payload.reason.strip(),
+                performed_by="Operations Planner",
+                field_name="scheduled_time",
+                old_value=previous_scheduled_time,
+                new_value=next_scheduled_time,
+                details={
+                    "reason": payload.reason.strip(),
+                    "reschedule_count": updated["reschedule_count"],
+                    "original_scheduled_time": str(updated["original_scheduled_time"]),
+                },
+            )
+            self.repository.supersede_pending_recommendations(appt_id)
+        except AppError:
+            raise
+        except Exception as exc:
+            self.repository.rollback()
+            raise AppError(
+                message=f"Unable to reschedule appointment: {exc}",
+                code="APPOINTMENT_RESCHEDULE_FAILED",
+                status_code=500,
+                details={"appt_id": appt_id},
+            ) from exc
+
+        prediction = None
+        scoring_status = "model_unavailable"
+        message = (
+            "Appointment rescheduled. ML-v2 artifacts are unavailable, "
+            "so rescoring was skipped."
+        )
+        try:
+            prediction = PredictionOrchestrationService(
+                self.repository.db,
+                self.repository,
+            ).score_and_persist(appt_id)
+            self.repository.create_audit_event(
+                appt_id=appt_id,
+                event_type="PREDICTION_UPDATED",
+                event_time=now,
+                notes="ML-v2 prediction recalculated after appointment reschedule.",
+                performed_by="Warehouse ML-v2 Service",
+                field_name="turn_risk_score",
+                old_value=(previous_prediction or {}).get("turn_risk_score"),
+                new_value=prediction["turn_risk_score"],
+                details={
+                    "previous_prediction": previous_prediction or {},
+                    "new_prediction": prediction,
+                    "model_version": prediction["model_version"],
+                },
+            )
+            scoring_status = "scored"
+            message = f"Appointment rescheduled and rescored by {prediction['model_version']}."
+        except Exception:
+            scoring_status = "failed"
+            message = "Appointment rescheduled, but ML-v2 rescoring failed."
+
+        return normalize_database_value({
+            "appt_id": appt_id,
+            "previous_scheduled_time": previous_scheduled_time,
+            "scheduled_time": updated["scheduled_time"],
+            "estimated_arrival_time": updated["estimated_arrival_time"],
+            "original_scheduled_time": updated["original_scheduled_time"],
+            "is_rescheduled": updated["is_rescheduled"],
+            "reschedule_count": updated["reschedule_count"],
+            "rescheduled_at": updated["rescheduled_at"],
+            "prediction": prediction,
+            "scoring_status": scoring_status,
             "message": message,
         })
 

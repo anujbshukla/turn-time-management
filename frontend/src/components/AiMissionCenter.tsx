@@ -12,6 +12,7 @@ import {
   refreshOptimizationMissionOutcomes,
   updateOptimizationMissionStatus,
 } from "../services/optimization";
+import { MissionWhatIfPanel } from "./MissionWhatIfPanel";
 
 type Props = {
   missions: AiMission[];
@@ -403,163 +404,16 @@ export function AiMissionCenter({
 
                 {scenarioMissionId === mission.mission_id &&
                   mission.category === "Coordinated Recovery" && (
-                    <div className="mission-what-if-panel">
-                      <div className="mission-what-if-heading">
-                        <div>
-                          <span>Mission-level What-If</span>
-                          <strong>Re-optimize the entire appointment group</strong>
-                        </div>
-                        <small>
-                          Limits are caps on real available headroom, not synthetic capacity.
-                        </small>
-                      </div>
-
-                      <div className="mission-what-if-controls">
-                        {([
-                          [
-                            "max_extra_loaders_per_hour",
-                            "Extra loaders / hour",
-                          ],
-                          [
-                            "max_extra_forklifts_per_hour",
-                            "Extra forklifts / hour",
-                          ],
-                          [
-                            "max_staging_labor_per_hour",
-                            "Staging labor / hour",
-                          ],
-                        ] as const).map(([field, label]) => {
-                          const value = scenarioFor(mission)[field];
-                          return (
-                            <label key={field}>
-                              <span>{label}</span>
-                              <div className="mission-scenario-stepper">
-                                <button
-                                  type="button"
-                                  disabled={(value ?? 0) <= 0}
-                                  onClick={() =>
-                                    updateScenario(mission, {
-                                      [field]: Math.max(
-                                        0,
-                                        (value ?? 0) - 1,
-                                      ),
-                                    })
-                                  }
-                                >
-                                  −
-                                </button>
-                                <strong>
-                                  {value === null ? "Auto" : value}
-                                </strong>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    updateScenario(mission, {
-                                      [field]:
-                                        value === null ? 1 : value + 1,
-                                    })
-                                  }
-                                >
-                                  +
-                                </button>
-                                <button
-                                  type="button"
-                                  className="quiet"
-                                  onClick={() =>
-                                    updateScenario(mission, {
-                                      [field]: null,
-                                    })
-                                  }
-                                >
-                                  Auto
-                                </button>
-                              </div>
-                            </label>
-                          );
-                        })}
-
-                        <label className="mission-dock-toggle">
-                          <input
-                            type="checkbox"
-                            checked={
-                              scenarioFor(mission).allow_dock_reassignment
-                            }
-                            onChange={(event) =>
-                              updateScenario(mission, {
-                                allow_dock_reassignment:
-                                  event.target.checked,
-                              })
-                            }
-                          />
-                          <span>Allow compatible dock reassignment</span>
-                        </label>
-                      </div>
-
-                      <button
-                        type="button"
-                        className="primary"
-                        disabled={
-                          scenarioLoadingId === mission.mission_id
-                        }
-                        onClick={() => void runMissionScenario(mission)}
-                      >
-                        {scenarioLoadingId === mission.mission_id
-                          ? "Re-optimizing..."
-                          : "Re-optimize mission"}
-                      </button>
-
-                      {scenarioResults[mission.mission_id]?.missions[0] &&
-                        (() => {
-                          const scenarioMission =
-                            scenarioResults[mission.mission_id].missions[0];
-                          return (
-                            <div className="mission-scenario-result">
-                              <div>
-                                <span>Projected SLA misses</span>
-                                <strong>
-                                  {mission.projected_sla_misses_before ?? 0}
-                                  {" → "}
-                                  {scenarioMission.projected_sla_misses_after ?? 0}
-                                </strong>
-                              </div>
-                              <div>
-                                <span>Appointments recovered</span>
-                                <strong>
-                                  {scenarioMission.appointments_recovered ?? 0}
-                                </strong>
-                              </div>
-                              <div>
-                                <span>Minutes saved</span>
-                                <strong>
-                                  {Math.round(
-                                    scenarioMission.projected_minutes_saved,
-                                  )}
-                                </strong>
-                              </div>
-                              <div>
-                                <span>Net savings</span>
-                                <strong>
-                                  {formatCurrency(
-                                    scenarioMission.estimated_financial_benefit,
-                                  )}
-                                </strong>
-                              </div>
-                              <div>
-                                <span>Dock moves</span>
-                                <strong>
-                                  {scenarioMission.dock_feasibility?.dock_moves ?? 0}
-                                </strong>
-                              </div>
-                              <div>
-                                <span>Unresolved shortages</span>
-                                <strong>
-                                  {scenarioMission.resource_shortages?.length ?? 0}
-                                </strong>
-                              </div>
-                            </div>
-                          );
-                        })()}
-                    </div>
+                    <MissionWhatIfPanel
+                      mission={mission}
+                      scenario={scenarioFor(mission)}
+                      scenarioResult={scenarioResults[mission.mission_id]}
+                      loading={scenarioLoadingId === mission.mission_id}
+                      onUpdateScenario={(patch) =>
+                        updateScenario(mission, patch)
+                      }
+                      onRunScenario={() => runMissionScenario(mission)}
+                    />
                   )}
 
 

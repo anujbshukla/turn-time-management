@@ -1,0 +1,2110 @@
+/* Stable card rhythm: content can vary, but cards no longer collapse to
+   dramatically different heights for short recommendations. */
+.recommendations-action-row .mission-style-actions .ai-action-card {
+  min-height: 218px;
+}
+
+.recommendations-action-row .mission-style-actions .ai-action-card>p {
+  min-height: 42px;
+}
+
+.recommendations-action-row .mission-style-actions .ai-action-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.recommendations-action-row .mission-style-actions .ai-action-metrics>div {
+  min-height: 54px;
+}
+
+.recommendations-action-row .mission-style-actions .ai-action-recommendation {
+  min-height: 48px;
+}
+
+.recommendations-action-row .mission-style-actions .ai-action-card-actions {
+  min-height: 30px;
+  align-items: center;
+}
+
+/* Matching scrollbars on both panels. */
+.recommendations-action-row .ai-mission-list::-webkit-scrollbar,
+.recommendations-action-row .mission-style-actions .ai-action-cards-grid::-webkit-scrollbar {
+  width: 8px;
+}
+
+.recommendations-action-row .ai-mission-list::-webkit-scrollbar-track,
+.recommendations-action-row .mission-style-actions .ai-action-cards-grid::-webkit-scrollbar-track {
+  border-radius: 999px;
+  background: #edf1f6;
+}
+
+.recommendations-action-row .ai-mission-list::-webkit-scrollbar-thumb,
+.recommendations-action-row .mission-style-actions .ai-action-cards-grid::-webkit-scrollbar-thumb {
+  border: 2px solid #edf1f6;
+  border-radius: 999px;
+  background: #a9b6c8;
+}
+
+/* Empty state retains the same panel footprint instead of disappearing. */
+.ai-action-empty {
+  display: grid;
+  min-height: 220px;
+  place-items: center;
+  align-content: center;
+  gap: 7px;
+  padding: 28px;
+  border: 1px dashed #d6dfeb;
+  border-radius: 11px;
+  color: #718298;
+  background: #fbfcfe;
+  text-align: center;
+}
+
+.ai-action-empty .ai-mission-mark {
+  margin-bottom: 3px;
+}
+
+.ai-action-empty strong {
+  color: #263a50;
+  font-size: 13px;
+}
+
+.ai-action-empty p {
+  max-width: 360px;
+  margin: 0;
+  color: #78889b;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+@media (max-width: 1180px) {
+
+  .recommendations-action-row .ai-mission-center:has(.ai-mission-body),
+  .recommendations-action-row .mission-style-actions {
+    height: 610px;
+    min-height: 610px;
+    max-height: 610px;
+  }
+}
+
+@media (max-width: 680px) {
+
+  .recommendations-action-row .ai-mission-center:has(.ai-mission-body),
+  .recommendations-action-row .mission-style-actions {
+    height: auto;
+    min-height: 0;
+    max-height: none;
+  }
+
+  .recommendations-action-row .ai-mission-center:has(.ai-mission-body) .ai-mission-list,
+  .recommendations-action-row .mission-style-actions .ai-action-cards-grid {
+    max-height: 560px;
+  }
+}
+
+
+/* Shared collapse control for AI Mission Center + Interactive AI Actions */
+.ai-workspace-shell {
+  margin-bottom: 22px;
+}
+
+.ai-workspace-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 54px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  border: 1px solid #dbe3ef;
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.ai-workspace-toolbar>div {
+  display: grid;
+  gap: 2px;
+}
+
+.ai-workspace-toolbar .panel-eyebrow {
+  margin: 0;
+}
+
+.ai-workspace-toolbar strong {
+  color: #21344d;
+  font-size: 13px;
+}
+
+.ai-workspace-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 1px solid #cad6e7;
+  border-radius: 999px;
+  color: #2451a0;
+  background: #f8fbff;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ai-workspace-toggle:hover {
+  background: #edf4ff;
+}
+
+.ai-workspace-toggle b {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.ai-workspace-shell.collapsed .ai-workspace-toolbar {
+  margin-bottom: 0;
+}
+
+/* Mission Center no longer owns collapse behavior. */
+.ai-mission-header {
+  cursor: default;
+}
+
+.ai-mission-header:hover {
+  background: inherit;
+}
+
+@media (max-width: 680px) {
+  .ai-workspace-toolbar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ai-workspace-toggle {
+    align-self: flex-end;
+  }
+}
+
+
+/* ==========================================================
+   Global operating-window custom date range
+========================================================== */
+
+/* Date presets now include Custom date as the fifth choice. */
+.date-preset-tabs {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+/* The separate Date field was removed, so the compact header has
+   one less grid column and gives more room to the operating window. */
+.operations-filter-row {
+  grid-template-columns:
+    minmax(92px, 0.55fr) minmax(430px, 2.65fr) minmax(150px, 0.95fr) minmax(150px, 1.05fr) minmax(150px, 1.05fr) minmax(145px, 0.95fr) auto;
+}
+
+.custom-date-range-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px;
+  align-items: end;
+  min-width: 0;
+}
+
+.custom-date-range-track {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) auto minmax(120px, 1fr);
+  gap: 7px;
+  align-items: end;
+  min-width: 0;
+  padding: 4px 7px;
+  border: 1px solid #dce4ee;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.custom-date-range-track label {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.custom-date-range-track label>span {
+  color: #708198;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.custom-date-range-track input {
+  width: 100%;
+  min-width: 0;
+  height: 28px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 6px;
+  color: #2f455e;
+  outline: none;
+  background: #f6f8fb;
+  font: inherit;
+  font-size: 9px;
+}
+
+.custom-date-range-track input:focus {
+  background: #ffffff;
+  box-shadow: 0 0 0 2px rgba(49, 88, 165, 0.12);
+}
+
+.custom-date-range-arrow {
+  display: grid;
+  height: 28px;
+  place-items: center;
+  color: #3158a5;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.custom-date-back-button {
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid #cad6e7;
+  border-radius: 9px;
+  color: #3158a5;
+  background: #ffffff;
+  font-size: 9px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.custom-date-back-button:hover {
+  background: #edf4ff;
+}
+
+@media (max-width: 1500px) {
+  .operations-filter-row {
+    grid-template-columns:
+      minmax(82px, 0.5fr) minmax(390px, 2.45fr) minmax(140px, 0.9fr) minmax(135px, 1fr) minmax(135px, 1fr) minmax(135px, 0.95fr) auto;
+  }
+}
+
+@media (max-width: 1180px) {
+  .custom-date-range-control {
+    grid-column: span 2;
+  }
+
+  .custom-date-range-track {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .custom-date-range-control {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 520px) {
+  .date-preset-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .custom-date-range-control,
+  .custom-date-range-track {
+    grid-template-columns: 1fr;
+  }
+
+  .custom-date-range-arrow {
+    height: auto;
+    transform: rotate(90deg);
+  }
+
+  .custom-date-back-button {
+    width: 100%;
+  }
+}
+
+
+/* Previous 7 days adds a sixth operating-window preset. */
+.date-preset-tabs {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+
+/* Clearer dashboard comparison values */
+.comparison-values {
+  gap: 6px;
+  align-items: baseline;
+}
+
+.comparison-values .comparison-current-value,
+.comparison-values .comparison-previous-value {
+  color: #263d56;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.comparison-values .comparison-vs {
+  color: #8290a2;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: lowercase;
+}
+
+
+.savings-value-basis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 12px;
+  color: #64748b;
+  font-size: 0.72rem;
+}
+
+.savings-value-basis span:first-child {
+  color: #3158a5;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+
+.ai-mission-execution-error {
+  margin: 0 0 12px;
+}
+
+.ai-mission-execution-plan {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid #dfe6f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.ai-mission-execution-plan>strong {
+  font-size: 0.78rem;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ai-mission-execution-plan button {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) auto;
+  gap: 3px 12px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ai-mission-execution-plan button:hover {
+  border-color: #a9bce2;
+  background: #f5f8ff;
+}
+
+.ai-mission-execution-plan button span,
+.ai-mission-execution-plan button b {
+  font-size: 0.78rem;
+}
+
+.ai-mission-execution-plan button small {
+  grid-column: 1 / -1;
+  color: #64748b;
+  font-size: 0.72rem;
+}
+
+
+.mission-what-if-panel {
+  grid-column: 1 / -1;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid #d8e2f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.mission-what-if-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.mission-what-if-heading div {
+  display: grid;
+  gap: 2px;
+}
+
+.mission-what-if-heading span {
+  color: #3158a5;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mission-what-if-heading strong {
+  font-size: 0.9rem;
+  color: #1f2937;
+}
+
+.mission-what-if-heading small {
+  max-width: 340px;
+  color: #64748b;
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+.mission-what-if-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.mission-what-if-controls>label {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.mission-what-if-controls>label>span {
+  color: #475569;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.mission-scenario-stepper {
+  display: grid;
+  grid-template-columns: 30px minmax(44px, 1fr) 30px auto;
+  gap: 5px;
+  align-items: center;
+}
+
+.mission-scenario-stepper button {
+  min-height: 30px;
+  padding: 4px 8px;
+}
+
+.mission-scenario-stepper strong {
+  text-align: center;
+  font-size: 0.84rem;
+}
+
+.mission-what-if-controls .mission-dock-toggle {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 9px;
+}
+
+.mission-scenario-result {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(100px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.mission-scenario-result>div {
+  display: grid;
+  gap: 3px;
+  padding: 9px 10px;
+  border-radius: 9px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+}
+
+.mission-scenario-result span {
+  color: #64748b;
+  font-size: 0.7rem;
+}
+
+.mission-scenario-result strong {
+  color: #172033;
+  font-size: 0.88rem;
+}
+
+@media (max-width: 1100px) {
+  .mission-what-if-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .mission-scenario-result {
+    grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+}
+
+.mission-realized-panel {
+  grid-column: 1 / -1;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid #d8e2f0;
+  border-radius: 12px;
+  background: #f8fafc;
+}
+
+.mission-realized-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.mission-realized-heading>div {
+  display: grid;
+  gap: 2px;
+}
+
+.mission-realized-heading span {
+  font-size: .75rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: #3158a5;
+}
+
+.mission-realized-heading strong {
+  font-size: .9rem;
+  color: #1f2937;
+}
+
+.mission-realized-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.mission-realized-grid>div {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  background: #fff;
+}
+
+.mission-realized-grid span,
+.mission-realized-grid small {
+  color: #64748b;
+  font-size: .71rem;
+}
+
+.mission-realized-grid strong {
+  color: #172033;
+  font-size: .92rem;
+}
+
+.mission-realized-empty {
+  margin: 0;
+  color: #64748b;
+  font-size: .78rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 1100px) {
+  .mission-realized-grid {
+    grid-template-columns: repeat(2, minmax(130px, 1fr));
+  }
+}
+
+
+.ml-health-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.ml-health-header,
+.ml-health-header-actions,
+.ml-health-subheading,
+.ml-health-model-version {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ml-health-header>div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.ml-health-eyebrow,
+.ml-health-subheading span,
+.ml-health-model-version span {
+  color: #3158a5;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ml-health-header h3,
+.ml-health-subheading h4 {
+  margin: 0;
+  color: #172033;
+}
+
+.ml-health-header h3 {
+  font-size: 1.02rem;
+}
+
+.ml-health-header p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+.ml-health-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.ml-health-status-healthy {
+  color: #177245;
+  background: #e8f7ef;
+}
+
+.ml-health-status-watch {
+  color: #8b6400;
+  background: #fff6d9;
+}
+
+.ml-health-status-retrain-recommended {
+  color: #a13933;
+  background: #fdebea;
+}
+
+.ml-health-model-version {
+  justify-content: flex-start;
+  padding: 9px 11px;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  background: #f8fafc;
+}
+
+.ml-health-model-version strong {
+  color: #172033;
+  font-size: 0.82rem;
+}
+
+.ml-health-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(130px, 1fr));
+  gap: 9px;
+}
+
+.ml-health-metrics article {
+  display: grid;
+  gap: 4px;
+  padding: 11px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.ml-health-metrics article>span {
+  color: #64748b;
+  font-size: 0.73rem;
+  font-weight: 700;
+}
+
+.ml-health-metrics article strong {
+  color: #172033;
+  font-size: 1.05rem;
+}
+
+.ml-health-metrics article small {
+  color: #7a8698;
+  font-size: 0.7rem;
+}
+
+.ml-health-lower-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 12px;
+}
+
+.ml-health-governance,
+.ml-health-drift,
+.ml-health-facilities {
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 11px;
+  background: #f8fafc;
+}
+
+.ml-health-subheading>div {
+  display: grid;
+  gap: 2px;
+}
+
+.ml-health-subheading h4 {
+  font-size: 0.88rem;
+}
+
+.ml-health-governance ul {
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: #475569;
+  font-size: 0.77rem;
+  line-height: 1.5;
+}
+
+.ml-health-drift-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.ml-health-drift-list>div {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 9px;
+  align-items: center;
+  padding: 7px 8px;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.ml-health-drift-list span {
+  color: #475569;
+  font-size: 0.75rem;
+  text-transform: capitalize;
+}
+
+.ml-health-drift-list strong {
+  color: #172033;
+  font-size: 0.78rem;
+}
+
+.ml-health-drift-list em {
+  min-width: 48px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 800;
+  text-align: center;
+}
+
+.ml-drift-stable {
+  color: #177245;
+  background: #e8f7ef;
+}
+
+.ml-drift-watch {
+  color: #8b6400;
+  background: #fff6d9;
+}
+
+.ml-drift-high {
+  color: #a13933;
+  background: #fdebea;
+}
+
+.ml-health-table-wrapper {
+  overflow-x: auto;
+  margin-top: 10px;
+}
+
+.ml-health-table-wrapper table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ml-health-table-wrapper th,
+.ml-health-table-wrapper td {
+  padding: 8px 9px;
+  border-bottom: 1px solid #e2e8f0;
+  text-align: left;
+  font-size: 0.74rem;
+}
+
+.ml-health-table-wrapper th {
+  color: #64748b;
+  font-weight: 800;
+}
+
+.ml-health-table-wrapper td {
+  color: #334155;
+}
+
+@media (max-width: 1200px) {
+  .ml-health-metrics {
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
+  }
+
+  .ml-health-lower-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+.ml-health-model-version {
+  justify-content: space-between;
+}
+
+.ml-health-model-version>div:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.ml-health-model-version small {
+  color: #7a8698;
+  font-size: 0.71rem;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* BEGIN UI CONSISTENCY PATCH 2026-08-17 */
+/* ==========================================================
+   UI consistency patch â€” Mission What-If + ML Governance
+   Keeps new AI controls aligned with the existing dashboard UI.
+   ========================================================== */
+
+/* ---------- Mission Center: shared action buttons ---------- */
+.ai-mission-card-actions {
+  display: flex !important;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.ai-mission-card-actions button,
+.mission-what-if-panel button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid #d6dce6;
+  border-radius: 8px;
+  color: #344057;
+  background: #ffffff;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.15;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.ai-mission-card-actions button:hover:not(:disabled),
+.mission-what-if-panel button:hover:not(:disabled) {
+  border-color: #b8c5da;
+  background: #f7f9fc;
+}
+
+.ai-mission-card-actions button:focus-visible,
+.mission-what-if-panel button:focus-visible,
+.ml-health-panel button:focus-visible {
+  outline: 2px solid #3158a5;
+  outline-offset: 2px;
+}
+
+.ai-mission-card-actions button.primary,
+.ai-mission-card-actions button.success,
+.mission-what-if-panel>button.primary,
+.mission-what-if-panel button.primary {
+  border-color: #3158a5;
+  color: #ffffff;
+  background: #3158a5;
+  box-shadow: 0 5px 12px rgba(49, 88, 165, 0.16);
+}
+
+.ai-mission-card-actions button.primary:hover:not(:disabled),
+.ai-mission-card-actions button.success:hover:not(:disabled),
+.mission-what-if-panel button.primary:hover:not(:disabled) {
+  border-color: #284b90;
+  background: #284b90;
+}
+
+.ai-mission-card-actions button.quiet,
+.mission-what-if-panel button.quiet {
+  border-color: transparent;
+  color: #68758b;
+  background: transparent;
+  box-shadow: none;
+}
+
+.ai-mission-card-actions button:disabled,
+.mission-what-if-panel button:disabled,
+.ml-health-panel button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+/* ---------- Mission-level What-If ---------- */
+.mission-what-if-panel {
+  grid-column: 1 / -1;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid #dce3ee;
+  border-radius: 12px;
+  background: #f8fafd;
+  box-shadow: inset 3px 0 0 #3158a5;
+}
+
+.mission-what-if-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+
+.mission-what-if-heading>div {
+  display: grid;
+  gap: 3px;
+}
+
+.mission-what-if-heading span {
+  color: #3158a5;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.mission-what-if-heading strong {
+  color: #172033;
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.mission-what-if-heading small {
+  max-width: 320px;
+  color: #758197;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.mission-what-if-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.mission-what-if-controls>label {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+  padding: 11px;
+  border: 1px solid #e0e6ef;
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.mission-what-if-controls>label>span {
+  color: #5f6c82;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.mission-scenario-stepper {
+  display: grid;
+  grid-template-columns: 32px minmax(40px, 1fr) 32px auto;
+  min-width: 0;
+  align-items: center;
+  gap: 5px;
+}
+
+.mission-scenario-stepper button {
+  min-width: 32px;
+  min-height: 32px;
+  height: 32px;
+  padding: 0 8px;
+}
+
+.mission-scenario-stepper button:not(.quiet) {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  color: #3158a5;
+  background: #f7f9fd;
+  font-size: 16px;
+}
+
+.mission-scenario-stepper strong {
+  min-width: 38px;
+  color: #172033;
+  font-size: 12px;
+  font-weight: 850;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.mission-scenario-stepper .quiet {
+  border-color: #d6dce6;
+  color: #3158a5;
+  background: #ffffff;
+  font-size: 10px;
+}
+
+.mission-what-if-controls .mission-dock-toggle {
+  grid-column: 1 / -1;
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 11px;
+  cursor: pointer;
+}
+
+.mission-dock-toggle input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #3158a5;
+}
+
+.mission-dock-toggle span {
+  color: #344057 !important;
+  font-size: 10px !important;
+  font-weight: 750 !important;
+}
+
+.mission-what-if-panel>.primary {
+  min-width: 150px;
+}
+
+.mission-scenario-result {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(100px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.mission-scenario-result>div {
+  display: grid;
+  gap: 3px;
+  padding: 9px 10px;
+  border: 1px solid #e1e7f0;
+  border-radius: 9px;
+  background: #ffffff;
+}
+
+.mission-scenario-result span {
+  color: #7a8597;
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.mission-scenario-result strong {
+  color: #172033;
+  font-size: 12px;
+}
+
+/* ---------- ML Governance ---------- */
+.ml-health-panel {
+  display: grid;
+  gap: 12px;
+  color: #172033;
+}
+
+.ml-health-model-version {
+  display: flex;
+  min-height: 56px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 12px;
+  border: 1px solid #e0e6ef;
+  border-radius: 10px;
+  background: #f8fafd;
+}
+
+.ml-health-model-version>div:first-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ml-health-model-version span {
+  color: #3158a5;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ml-health-model-version strong {
+  overflow: hidden;
+  color: #172033;
+  font-size: 12px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ml-health-model-version small {
+  color: #7a8597;
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.ml-health-header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 9px;
+}
+
+.ml-health-panel .ml-health-header-actions button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid #d6dce6;
+  border-radius: 8px;
+  color: #344057;
+  background: #ffffff;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 750;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background 0.18s ease,
+    box-shadow 0.18s ease;
+}
+
+.ml-health-panel .ml-health-header-actions button:hover:not(:disabled) {
+  border-color: #b8c5da;
+  background: #f6f8fb;
+}
+
+.ml-health-status {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.ml-health-status-healthy {
+  color: #19704a;
+  background: #e7f7ef;
+}
+
+.ml-health-status-watch {
+  color: #8b6500;
+  background: #fff4cf;
+}
+
+.ml-health-status-retrain-recommended {
+  color: #a23d35;
+  background: #fee9e7;
+}
+
+.ml-health-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(115px, 1fr));
+  gap: 10px;
+}
+
+.ml-health-metrics article {
+  display: grid;
+  min-width: 0;
+  min-height: 82px;
+  align-content: start;
+  gap: 4px;
+  padding: 11px 12px;
+  border: 1px solid #e1e7f0;
+  border-radius: 11px;
+  background: #ffffff;
+}
+
+.ml-health-metrics article>span {
+  color: #657187;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.ml-health-metrics article strong {
+  margin-top: 2px;
+  color: #172033;
+  font-size: 17px;
+  font-weight: 850;
+  line-height: 1.1;
+}
+
+.ml-health-metrics article small {
+  color: #8490a3;
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.ml-health-lower-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: 10px;
+}
+
+.ml-health-governance,
+.ml-health-drift,
+.ml-health-facilities {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #e1e7f0;
+  border-radius: 11px;
+  background: #ffffff;
+}
+
+.ml-health-subheading span {
+  color: #3158a5;
+  font-size: 9px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ml-health-subheading h4 {
+  margin: 3px 0 0;
+  color: #172033;
+  font-size: 12px;
+}
+
+.ml-health-governance ul {
+  margin: 10px 0 0;
+  padding-left: 17px;
+  color: #59667b;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.ml-health-drift-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.ml-health-drift-list>div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border: 1px solid #edf0f5;
+  border-radius: 8px;
+  background: #f8fafd;
+}
+
+.ml-health-drift-list span {
+  overflow: hidden;
+  color: #5d697e;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.ml-health-drift-list strong {
+  color: #172033;
+  font-size: 10px;
+}
+
+.ml-health-drift-list em {
+  min-width: 48px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 850;
+  text-align: center;
+}
+
+.ml-drift-stable {
+  color: #19704a;
+  background: #e7f7ef;
+}
+
+.ml-drift-watch {
+  color: #8b6500;
+  background: #fff4cf;
+}
+
+.ml-drift-high {
+  color: #a23d35;
+  background: #fee9e7;
+}
+
+/* ---------- Responsive behavior ---------- */
+@media (max-width: 1180px) {
+  .mission-what-if-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .mission-what-if-controls .mission-dock-toggle {
+    grid-column: auto;
+  }
+
+  .ml-health-metrics {
+    grid-template-columns: repeat(2, minmax(130px, 1fr));
+  }
+
+  .ml-health-lower-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+
+  .mission-what-if-heading,
+  .ml-health-model-version {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ml-health-header-actions {
+    justify-content: space-between;
+  }
+
+  .mission-scenario-result,
+  .ml-health-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-mission-card-actions button {
+    flex: 1 1 130px;
+  }
+}
+
+/* END UI CONSISTENCY PATCH 2026-08-17 */
+
+/* Appointment operational intelligence */
+.appointment-intelligence {
+  display: grid;
+  gap: 14px;
+  margin: 14px 0
+}
+
+.live-sla-card {
+  display: grid;
+  gap: 3px;
+  padding: 15px 16px;
+  border: 1px solid #d7deea;
+  border-radius: 12px;
+  background: #f8fafc
+}
+
+.live-sla-card>span {
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  font-size: 10px;
+  font-weight: 800;
+  color: #68758b
+}
+
+.live-sla-card>strong {
+  font-size: 25px;
+  line-height: 1.1
+}
+
+.live-sla-card>small {
+  color: #68758b
+}
+
+.live-sla-card.good {
+  border-color: #b9dfcc;
+  background: #f4fbf7
+}
+
+.live-sla-card.warn {
+  border-color: #ecd49d;
+  background: #fffaf0
+}
+
+.live-sla-card.bad {
+  border-color: #efb7b7;
+  background: #fff6f6
+}
+
+.operational-intelligence-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px
+}
+
+.intelligence-card {
+  border: 1px solid #e0e5ed;
+  border-radius: 10px;
+  padding: 13px;
+  background: #fff
+}
+
+.intelligence-card dl {
+  display: grid;
+  gap: 7px;
+  margin: 9px 0 0
+}
+
+.intelligence-card dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px
+}
+
+.intelligence-card dt {
+  color: #738097;
+  font-size: 11px
+}
+
+.intelligence-card dd {
+  margin: 0;
+  text-align: right;
+  font-size: 11px;
+  font-weight: 700;
+  color: #344057
+}
+
+.operational-timeline-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px
+}
+
+.operational-timeline-grid div {
+  display: grid;
+  gap: 4px;
+  padding: 9px;
+  border-radius: 8px;
+  background: #f7f9fc
+}
+
+.operational-timeline-grid span {
+  font-size: 10px;
+  color: #738097
+}
+
+.operational-timeline-grid strong {
+  font-size: 11px
+}
+
+.sla-explanation-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 15px;
+  align-items: flex-start
+}
+
+.sla-explanation-heading h4 {
+  margin: 3px 0 0
+}
+
+.sla-explanation-card>p {
+  font-size: 12px;
+  line-height: 1.55;
+  color: #47546a
+}
+
+.risk-contributor-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px
+}
+
+.risk-contributor-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid #edf0f4
+}
+
+.risk-contributor-row div {
+  display: grid;
+  gap: 2px
+}
+
+.risk-contributor-row small,
+.explainability-note {
+  color: #768399
+}
+
+.risk-contributor-row>span {
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap
+}
+
+.shipment-items-table-wrap {
+  overflow: auto;
+  margin-top: 9px
+}
+
+.shipment-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px
+}
+
+.shipment-items-table th,
+.shipment-items-table td {
+  padding: 8px;
+  border-bottom: 1px solid #edf0f4;
+  text-align: left;
+  white-space: nowrap
+}
+
+.shipment-items-table td:first-child {
+  white-space: normal
+}
+
+.shipment-items-table td:first-child small {
+  display: block;
+  color: #768399
+}
+
+.action-recommendation-reason {
+  margin-top: 8px;
+  padding: 9px 10px;
+  border-left: 3px solid #3158a5;
+  border-radius: 6px;
+  background: #f5f8fd;
+  font-size: 11px !important;
+  line-height: 1.45;
+  color: #44516a !important
+}
+
+.action-recommendation-reason strong {
+  color: #25324a
+}
+
+@media(max-width:900px) {
+  .operational-intelligence-grid {
+    grid-template-columns: 1fr
+  }
+
+  .operational-timeline-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr))
+  }
+}
+
+/* Turn time KPI follow-up */
+.turn-time-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 900px) {
+  .turn-time-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Appointment drawer requested layout - 2026-08-21 */
+.appointment-operational-intelligence-section {
+  display: block;
+}
+
+.operational-snapshot-card {
+  margin-top: 12px;
+}
+
+.operational-snapshot-card .details-grid {
+  margin-top: 10px;
+}
+
+.shipment-items-section .drawer-section-heading {
+  align-items: flex-start;
+}
+
+.shipment-line-count {
+  color: #7c879b;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.shipment-items-section .shipment-items-card {
+  margin-top: 12px;
+}
+
+.shipment-items-section .shipment-items-table-wrap {
+  overflow-x: auto;
+}
+
+.shipment-items-section .shipment-items-table {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: collapse;
+}
+
+.shipment-items-section .shipment-items-table th,
+.shipment-items-section .shipment-items-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #e5eaf2;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.shipment-items-section .shipment-items-table th {
+  color: #344057;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.shipment-items-section .shipment-items-table td {
+  color: #344057;
+  font-size: 12px;
+}
+
+.shipment-items-section .shipment-items-table td:first-child {
+  min-width: 180px;
+}
+
+.shipment-items-section .shipment-items-table td strong,
+.shipment-items-section .shipment-items-table td small {
+  display: block;
+}
+
+.shipment-items-section .shipment-items-table td small {
+  margin-top: 2px;
+  color: #7c879b;
+  font-size: 10px;
+}
+
+/* APPOINTMENT EDIT / RESCHEDULE WORKFLOWS */
+.appointment-drawer-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.appointment-drawer-action {
+  min-height: 36px;
+  white-space: nowrap;
+}
+
+.appointment-change-drawer,
+.reschedule-appointment-drawer {
+  z-index: 1300;
+}
+
+.appointment-change-backdrop {
+  z-index: 1290;
+}
+
+.appointment-change-notice {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border: 1px solid #d7deea;
+  border-radius: 8px;
+  background: #f7f9fc;
+  color: #5f6f88;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.reschedule-appointment-form {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: auto;
+  padding: 18px;
+}
+
+.reschedule-current-time {
+  margin-top: 8px;
+  font-size: 18px;
+  font-weight: 750;
+  color: #16233a;
+}
+
+.reschedule-reason-field {
+  grid-column: 1 / -1;
+}
+
+.reschedule-reason-field textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 92px;
+  box-sizing: border-box;
+  border: 1px solid #d7deea;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #17233a;
+  background: #ffffff;
+  font: inherit;
+}
+
+.appointment-change-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 750;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.appointment-change-badge.original {
+  color: #63718a;
+  background: #f1f4f8;
+  border-color: #e0e5ed;
+}
+
+.appointment-change-badge.edited {
+  color: #3158a5;
+  background: #eef4ff;
+  border-color: #d9e5fb;
+}
+
+.appointment-change-badge.rescheduled {
+  color: #8a5a0a;
+  background: #fff7df;
+  border-color: #f2df9c;
+}
+
+/* ==========================================================
+   FINAL RESPONSIVE / OVERLAY FIX V2
+   Drawer layering + true layout containment
+========================================================== */
+
+/* ----------------------------------------------------------
+   Drawer layering
+---------------------------------------------------------- */
+
+.drawer-backdrop {
+  z-index: 1240;
+}
+
+.appointment-drawer {
+  z-index: 1250;
+}
+
+.appointment-change-backdrop {
+  z-index: 1290;
+}
+
+.appointment-change-drawer,
+.reschedule-appointment-drawer {
+  z-index: 1300;
+}
+
+
+/* ----------------------------------------------------------
+   Root layout containment
+---------------------------------------------------------- */
+
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+}
+
+/*
+   Do not use overflow-x:hidden here.
+   It can conceal an oversized child and produce the
+   black / offset effect seen when DevTools changes width.
+*/
+body {
+  overflow-x: auto;
+}
+
+#root {
+  overflow-x: clip;
+}
+
+
+/* ----------------------------------------------------------
+   Application shell
+---------------------------------------------------------- */
+
+.app-layout {
+  display: grid;
+  grid-template-columns: 245px minmax(0, 1fr);
+
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+
+  margin: 0;
+}
+
+.sidebar {
+  width: 245px;
+  min-width: 245px;
+  max-width: 245px;
+
+  left: 0;
+  margin: 0;
+}
+
+.main-content {
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+
+  padding-right: 34px;
+  padding-left: 34px;
+
+  overflow-x: clip;
+}
+
+.main-content>* {
+  width: 100%;
+  min-width: 0;
+  max-width: 1540px;
+
+  margin-right: auto;
+  margin-left: auto;
+}
+
+
+/* ----------------------------------------------------------
+   Operations header
+---------------------------------------------------------- */
+
+.compact-operations-header {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr) auto;
+
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+
+  gap: 10px;
+  align-items: center;
+}
+
+.compact-operations-header .top-header-controls {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.compact-operations-header .top-header-notification-row {
+  flex: 0 0 auto;
+  min-width: 0;
+  margin: 0;
+}
+
+
+/* ----------------------------------------------------------
+   Filter shell
+---------------------------------------------------------- */
+
+.operations-filter-shell,
+.compact-filter-shell {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.operations-filter-row {
+  display: grid;
+
+  grid-template-columns:
+    minmax(76px, 0.55fr) minmax(280px, 2.3fr) minmax(115px, 1fr) minmax(115px, 1fr) minmax(115px, 1fr) minmax(105px, 0.9fr) auto;
+
+  width: 100%;
+  min-width: 0;
+
+  gap: 7px;
+  align-items: end;
+}
+
+.operations-filter-row>* {
+  min-width: 0;
+}
+
+.operations-filter-row select,
+.operations-filter-row input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+
+/* ----------------------------------------------------------
+   Medium dashboard widths
+   Important: main usable area is viewport minus sidebar.
+---------------------------------------------------------- */
+
+@media (max-width: 1450px) {
+  .operations-filter-row {
+    grid-template-columns:
+      minmax(72px, 0.5fr) minmax(240px, 2fr) repeat(4, minmax(100px, 1fr)) auto;
+
+    gap: 6px;
+  }
+}
+
+
+/* ----------------------------------------------------------
+   DevTools / narrow desktop layout
+---------------------------------------------------------- */
+
+@media (max-width: 1280px) {
+  .compact-operations-header {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .compact-operations-header .top-header-notification-row {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+
+    z-index: 10;
+  }
+
+  .operations-filter-row {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+
+  .custom-date-range-control {
+    grid-column: span 2;
+  }
+
+  .clear-global-filters {
+    width: 100%;
+  }
+
+  .main-content {
+    padding-right: 24px;
+    padding-left: 24px;
+  }
+}
+
+
+/* ----------------------------------------------------------
+   Tablet
+---------------------------------------------------------- */
+
+@media (max-width: 1000px) {
+  .operations-filter-row {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .custom-date-range-control {
+    grid-column: 1 / -1;
+  }
+
+  .dashboard-charts-grid,
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ----------------------------------------------------------
+   Mobile
+---------------------------------------------------------- */
+
+@media (max-width: 760px) {
+  .app-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .main-content {
+    width: 100%;
+    padding: 20px 14px;
+  }
+
+  .operations-filter-row {
+    grid-template-columns: 1fr;
+  }
+
+  .custom-date-range-control {
+    grid-column: auto;
+  }
+}
+
+
+/* ----------------------------------------------------------
+   Dashboard grids must never force the shell wider
+---------------------------------------------------------- */
+
+.kpi-grid,
+.dashboard-charts-grid,
+.content-grid,
+.dock-grid,
+.operations-tabs,
+.operations-filter-row {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.kpi-grid>*,
+.dashboard-charts-grid>*,
+.content-grid>*,
+.dock-grid>* {
+  min-width: 0;
+}
+
+
+/* ----------------------------------------------------------
+   Only tables may scroll horizontally
+---------------------------------------------------------- */
+
+.appointment-panel {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.appointment-table-wrapper {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+
+  overflow-x: auto;
+  overflow-y: visible;
+
+  overscroll-behavior-x: contain;
+}
+
+/* ==========================================================
+   RESTORE APPOINTMENT DRAWER SIZE
+========================================================== */
+
+.appointment-drawer {
+  width: min(860px, 92vw);
+  max-width: 860px;
+}

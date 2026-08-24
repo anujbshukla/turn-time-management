@@ -69,7 +69,7 @@ Preview the planned volumes without changing PostgreSQL:
 
 ```powershell
 cd C:\turn-time-management
-python database\seed\generate_demo_data_v2.py --dry-run --anchor-date 2026-08-14
+python database\seed\generate_demo_data.py --dry-run --anchor-date 2026-08-14
 ```
 
 Expected default horizon for an August 14, 2026 anchor:
@@ -80,7 +80,7 @@ Expected default horizon for an August 14, 2026 anchor:
 After reviewing the dry-run output, replace the current data:
 
 ```powershell
-python database\seed\generate_demo_data_v2.py --reset --anchor-date 2026-08-14
+python database\seed\generate_demo_data.py --reset --anchor-date 2026-08-14
 ```
 
 The script prints a validation report after generation, including historical/current/future row counts, average turn time, SLA miss rate, arrival delay, product-history profile count and historical recovery-plan count.
@@ -88,3 +88,4 @@ The script prints a validation report after generation, including historical/cur
 ## Important ML rule
 
 The temporary future predictions are written with model version `synthetic-baseline-v2` only so the existing application remains usable immediately after reseeding. They are not the final ML-v2 predictions. The next phase trains the Arrival, Turn Duration and SLA models on the newly generated historical outcomes and then writes new predictions with a separately versioned model identifier.
+

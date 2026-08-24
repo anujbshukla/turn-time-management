@@ -56,3 +56,14 @@ Thumbs.db
 .DS_Store
 # Local database backups
 *.dump
+
+# Local database backups
+*.dump
+*.backup
+*.sql.gz
+
+# Temporary refactor/patch artifacts
+apply_phase*.py
+split_app_css.py
+patch_files/
+*.warehouse_agent_backup

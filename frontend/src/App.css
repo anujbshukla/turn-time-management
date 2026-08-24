@@ -12411,97 +12411,418 @@ h1 {
 
 /* APPOINTMENT EDIT / RESCHEDULE WORKFLOWS */
 .appointment-drawer-header-actions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 8px;
-    flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .appointment-drawer-action {
-    min-height: 36px;
-    white-space: nowrap;
+  min-height: 36px;
+  white-space: nowrap;
 }
 
 .appointment-change-drawer,
 .reschedule-appointment-drawer {
-    z-index: 1300;
+  z-index: 1300;
 }
 
 .appointment-change-backdrop {
-    z-index: 1290;
+  z-index: 1290;
 }
 
 .appointment-change-notice {
-    margin: 0 0 16px;
-    padding: 10px 12px;
-    border: 1px solid #d7deea;
-    border-radius: 8px;
-    background: #f7f9fc;
-    color: #5f6f88;
-    font-size: 12px;
-    line-height: 1.45;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border: 1px solid #d7deea;
+  border-radius: 8px;
+  background: #f7f9fc;
+  color: #5f6f88;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .reschedule-appointment-form {
-    display: flex;
-    flex: 1;
-    min-height: 0;
-    flex-direction: column;
-    overflow: auto;
-    padding: 18px;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  overflow: auto;
+  padding: 18px;
 }
 
 .reschedule-current-time {
-    margin-top: 8px;
-    font-size: 18px;
-    font-weight: 750;
-    color: #16233a;
+  margin-top: 8px;
+  font-size: 18px;
+  font-weight: 750;
+  color: #16233a;
 }
 
 .reschedule-reason-field {
-    grid-column: 1 / -1;
+  grid-column: 1 / -1;
 }
 
 .reschedule-reason-field textarea {
-    width: 100%;
-    resize: vertical;
-    min-height: 92px;
-    box-sizing: border-box;
-    border: 1px solid #d7deea;
-    border-radius: 8px;
-    padding: 10px 12px;
-    color: #17233a;
-    background: #ffffff;
-    font: inherit;
+  width: 100%;
+  resize: vertical;
+  min-height: 92px;
+  box-sizing: border-box;
+  border: 1px solid #d7deea;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #17233a;
+  background: #ffffff;
+  font: inherit;
 }
 
 .appointment-change-badge {
-    display: inline-flex;
-    align-items: center;
-    min-height: 24px;
-    padding: 0 9px;
-    border-radius: 999px;
-    font-size: 10px;
-    font-weight: 750;
-    white-space: nowrap;
-    border: 1px solid transparent;
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 750;
+  white-space: nowrap;
+  border: 1px solid transparent;
 }
 
 .appointment-change-badge.original {
-    color: #63718a;
-    background: #f1f4f8;
-    border-color: #e0e5ed;
+  color: #63718a;
+  background: #f1f4f8;
+  border-color: #e0e5ed;
 }
 
 .appointment-change-badge.edited {
-    color: #3158a5;
-    background: #eef4ff;
-    border-color: #d9e5fb;
+  color: #3158a5;
+  background: #eef4ff;
+  border-color: #d9e5fb;
 }
 
 .appointment-change-badge.rescheduled {
-    color: #8a5a0a;
-    background: #fff7df;
-    border-color: #f2df9c;
+  color: #8a5a0a;
+  background: #fff7df;
+  border-color: #f2df9c;
+}
+
+/* ==========================================================
+   FINAL RESPONSIVE / OVERLAY FIX V2
+   Drawer layering + true layout containment
+========================================================== */
+
+/* ----------------------------------------------------------
+   Drawer layering
+---------------------------------------------------------- */
+
+.drawer-backdrop {
+  z-index: 1240;
+}
+
+.appointment-drawer {
+  z-index: 1250;
+}
+
+.appointment-change-backdrop {
+  z-index: 1290;
+}
+
+.appointment-change-drawer,
+.reschedule-appointment-drawer {
+  z-index: 1300;
+}
+
+
+/* ----------------------------------------------------------
+   Root layout containment
+---------------------------------------------------------- */
+
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+}
+
+/*
+   Do not use overflow-x:hidden here.
+   It can conceal an oversized child and produce the
+   black / offset effect seen when DevTools changes width.
+*/
+body {
+  overflow-x: auto;
+}
+
+#root {
+  overflow-x: clip;
+}
+
+
+/* ----------------------------------------------------------
+   Application shell
+---------------------------------------------------------- */
+
+.app-layout {
+  display: grid;
+  grid-template-columns: 245px minmax(0, 1fr);
+
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+
+  margin: 0;
+}
+
+.sidebar {
+  width: 245px;
+  min-width: 245px;
+  max-width: 245px;
+
+  left: 0;
+  margin: 0;
+}
+
+.main-content {
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+
+  padding-right: 34px;
+  padding-left: 34px;
+
+  overflow-x: clip;
+}
+
+.main-content>* {
+  width: 100%;
+  min-width: 0;
+  max-width: 1540px;
+
+  margin-right: auto;
+  margin-left: auto;
+}
+
+
+/* ----------------------------------------------------------
+   Operations header
+---------------------------------------------------------- */
+
+.compact-operations-header {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr) auto;
+
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+
+  gap: 10px;
+  align-items: center;
+}
+
+.compact-operations-header .top-header-controls {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.compact-operations-header .top-header-notification-row {
+  flex: 0 0 auto;
+  min-width: 0;
+  margin: 0;
+}
+
+
+/* ----------------------------------------------------------
+   Filter shell
+---------------------------------------------------------- */
+
+.operations-filter-shell,
+.compact-filter-shell {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.operations-filter-row {
+  display: grid;
+
+  grid-template-columns:
+    minmax(76px, 0.55fr) minmax(280px, 2.3fr) minmax(115px, 1fr) minmax(115px, 1fr) minmax(115px, 1fr) minmax(105px, 0.9fr) auto;
+
+  width: 100%;
+  min-width: 0;
+
+  gap: 7px;
+  align-items: end;
+}
+
+.operations-filter-row>* {
+  min-width: 0;
+}
+
+.operations-filter-row select,
+.operations-filter-row input {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+
+/* ----------------------------------------------------------
+   Medium dashboard widths
+   Important: main usable area is viewport minus sidebar.
+---------------------------------------------------------- */
+
+@media (max-width: 1450px) {
+  .operations-filter-row {
+    grid-template-columns:
+      minmax(72px, 0.5fr) minmax(240px, 2fr) repeat(4, minmax(100px, 1fr)) auto;
+
+    gap: 6px;
+  }
+}
+
+
+/* ----------------------------------------------------------
+   DevTools / narrow desktop layout
+---------------------------------------------------------- */
+
+@media (max-width: 1280px) {
+  .compact-operations-header {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .compact-operations-header .top-header-notification-row {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+
+    z-index: 10;
+  }
+
+  .operations-filter-row {
+    grid-template-columns:
+      repeat(3, minmax(0, 1fr));
+  }
+
+  .custom-date-range-control {
+    grid-column: span 2;
+  }
+
+  .clear-global-filters {
+    width: 100%;
+  }
+
+  .main-content {
+    padding-right: 24px;
+    padding-left: 24px;
+  }
+}
+
+
+/* ----------------------------------------------------------
+   Tablet
+---------------------------------------------------------- */
+
+@media (max-width: 1000px) {
+  .operations-filter-row {
+    grid-template-columns:
+      repeat(2, minmax(0, 1fr));
+  }
+
+  .custom-date-range-control {
+    grid-column: 1 / -1;
+  }
+
+  .dashboard-charts-grid,
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+/* ----------------------------------------------------------
+   Mobile
+---------------------------------------------------------- */
+
+@media (max-width: 760px) {
+  .app-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sidebar {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .main-content {
+    width: 100%;
+    padding: 20px 14px;
+  }
+
+  .operations-filter-row {
+    grid-template-columns: 1fr;
+  }
+
+  .custom-date-range-control {
+    grid-column: auto;
+  }
+}
+
+
+/* ----------------------------------------------------------
+   Dashboard grids must never force the shell wider
+---------------------------------------------------------- */
+
+.kpi-grid,
+.dashboard-charts-grid,
+.content-grid,
+.dock-grid,
+.operations-tabs,
+.operations-filter-row {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.kpi-grid>*,
+.dashboard-charts-grid>*,
+.content-grid>*,
+.dock-grid>* {
+  min-width: 0;
+}
+
+
+/* ----------------------------------------------------------
+   Only tables may scroll horizontally
+---------------------------------------------------------- */
+
+.appointment-panel {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.appointment-table-wrapper {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+
+  overflow-x: auto;
+  overflow-y: visible;
+
+  overscroll-behavior-x: contain;
+}
+
+/* ==========================================================
+   RESTORE APPOINTMENT DRAWER SIZE
+========================================================== */
+
+.appointment-drawer {
+  width: min(860px, 92vw);
+  max-width: 860px;
 }

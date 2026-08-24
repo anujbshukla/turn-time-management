@@ -1,10 +1,20 @@
-import { useEffect, useState } from "react";
+import {
+    useEffect,
+    useState,
+} from "react";
+
 import { useWhatIf } from "../hooks/useWhatIf";
+
 import { AppointmentCopilot } from "./AppointmentCopilot";
+import { AppointmentEventHistory } from "./AppointmentEventHistory";
+import { AppointmentOperationalIntelligence } from "./AppointmentOperationalIntelligence";
+import { AppointmentRecoveryPlan } from "./AppointmentRecoveryPlan";
+import { AppointmentRiskAssessment } from "./AppointmentRiskAssessment";
+import { AppointmentWhatIfPanel } from "./AppointmentWhatIfPanel";
 import { EditAppointmentDialog } from "./EditAppointmentDialog";
 import { RescheduleAppointmentDialog } from "./RescheduleAppointmentDialog";
-import { AppointmentOperationalIntelligence } from "./AppointmentOperationalIntelligence";
 import { ShipmentItemsTable } from "./ShipmentItemsTable";
+
 import {
     updateRecommendationDecisions,
 } from "../services/recommendations";
@@ -15,175 +25,22 @@ import type {
 
 import type {
     AppointmentDetailsResponse,
-    RecommendationAction,
 } from "../types/appointmentDetails";
 
 import type {
     AppointmentListItem,
 } from "../types/appointments";
 
-
 type AppointmentDetailsDrawerProps = {
-    selectedAppointment: AppointmentListItem | null;
-    details: AppointmentDetailsResponse | null;
+    selectedAppointment:
+    AppointmentListItem | null;
+    details:
+    AppointmentDetailsResponse | null;
     loading: boolean;
     error: string | null;
     onRefresh: () => void;
     onClose: () => void;
 };
-
-
-function formatDate(
-    value: string | null | undefined,
-) {
-    if (!value) {
-        return "—";
-    }
-
-    return new Date(value).toLocaleString([], {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "numeric",
-        minute: "2-digit",
-    });
-}
-
-
-
-function formatPercent(
-    value: number | null | undefined,
-) {
-    if (value == null) {
-        return "—";
-    }
-
-    return `${Math.round(value * 100)}%`;
-}
-
-
-function formatCurrency(
-    value: number | null | undefined,
-) {
-    return `$${(value ?? 0).toLocaleString(
-        "en-US",
-        {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        },
-    )}`;
-}
-
-function formatEventType(
-    eventType: string,
-): string {
-    const labels: Record<string, string> = {
-        APPOINTMENT_CREATED:
-            "Appointment created",
-
-        SCHEDULED:
-            "Appointment scheduled",
-
-        ETA_UPDATED:
-            "Carrier ETA updated",
-
-        CARRIER_DELAYED:
-            "Carrier delay detected",
-
-        ARRIVED:
-            "Carrier arrived",
-
-        CHECKED_IN:
-            "Carrier checked in",
-
-        DOCK_ASSIGNED:
-            "Dock assigned",
-
-        LOADING_STARTED:
-            "Loading started",
-
-        LOADING_COMPLETED:
-            "Loading completed",
-
-        UNLOADING_STARTED:
-            "Unloading started",
-
-        UNLOADING_COMPLETED:
-            "Unloading completed",
-
-        DEPARTED:
-            "Carrier departed",
-
-        PREDICTION_GENERATED:
-            "AI prediction generated",
-
-        RECOMMENDATION_GENERATED:
-            "AI recovery plan generated",
-
-        RECOVERY_ACTION_ACCEPTED:
-            "Recovery action accepted",
-
-        RECOVERY_ACTION_REJECTED:
-            "Recovery action rejected",
-
-        RECOVERY_ACTION_RESET:
-            "Recovery action reset to pending",
-    };
-
-    return (
-        labels[eventType] ??
-        eventType
-            .replaceAll("_", " ")
-            .toLowerCase()
-            .replace(
-                /^./,
-                (firstCharacter) =>
-                    firstCharacter.toUpperCase(),
-            )
-    );
-}
-
-
-function actionResourceSummary(
-    action: RecommendationAction,
-) {
-    const resources: string[] = [];
-
-    if (action.additional_loaders > 0) {
-        resources.push(
-            `${action.additional_loaders} loader${action.additional_loaders === 1
-                ? ""
-                : "s"
-            }`,
-        );
-    }
-
-    if (action.additional_forklifts > 0) {
-        resources.push(
-            `${action.additional_forklifts} forklift${action.additional_forklifts === 1
-                ? ""
-                : "s"
-            }`,
-        );
-    }
-
-    if (action.required_equipment_type) {
-        resources.push(
-            action.required_equipment_type,
-        );
-    }
-
-    if (action.required_dock_id) {
-        resources.push(
-            action.required_dock_id,
-        );
-    }
-
-    return resources.length > 0
-        ? resources.join(" · ")
-        : "No additional resources";
-}
-
 
 export function AppointmentDetailsDrawer({
     selectedAppointment,
@@ -241,11 +98,8 @@ export function AppointmentDetailsDrawer({
         );
 
         setDecisionError(null);
-
         setExtraLoaders(0);
-
         setExtraForklifts(0);
-
         setPreStageProducts(false);
     }, [
         details?.recommendation
@@ -259,28 +113,23 @@ export function AppointmentDetailsDrawer({
     } = useWhatIf({
         appointmentId:
             selectedAppointment?.appt_id,
-
         selectedActionIds:
             Array.from(selectedActionIds),
-
         extraLoaders,
-
         extraForklifts,
-
         preStageProducts,
-
-        enabled:
-            Boolean(
-                selectedAppointment &&
-                details?.prediction,
-            ),
+        enabled: Boolean(
+            selectedAppointment &&
+            details?.prediction,
+        ),
     });
 
     function toggleActionSelection(
         actionId: number,
     ) {
         setSelectedActionIds((current) => {
-            const next = new Set(current);
+            const next =
+                new Set(current);
 
             if (next.has(actionId)) {
                 next.delete(actionId);
@@ -292,11 +141,8 @@ export function AppointmentDetailsDrawer({
         });
     }
 
-
     function selectAllActions() {
-        if (!details) {
-            return;
-        }
+        if (!details) return;
 
         setSelectedActionIds(
             new Set(
@@ -308,16 +154,15 @@ export function AppointmentDetailsDrawer({
         );
     }
 
-
     function clearActionSelection() {
         setSelectedActionIds(
             new Set<number>(),
         );
     }
 
-
     async function applyDecision(
-        decisionStatus: ActionDecisionStatus,
+        decisionStatus:
+            ActionDecisionStatus,
     ) {
         if (
             !details?.recommendation ||
@@ -334,13 +179,16 @@ export function AppointmentDetailsDrawer({
                 details.recommendation_actions
                     .filter((action) =>
                         selectedActionIds.has(
-                            action.recommendation_action_id,
+                            action
+                                .recommendation_action_id,
                         ),
                     )
                     .map((action) => ({
                         recommendation_action_id:
-                            action.recommendation_action_id,
-                        decision_status: decisionStatus,
+                            action
+                                .recommendation_action_id,
+                        decision_status:
+                            decisionStatus,
                     }));
 
             await updateRecommendationDecisions(
@@ -369,11 +217,9 @@ export function AppointmentDetailsDrawer({
         }
     }
 
-
     if (!selectedAppointment) {
         return null;
     }
-
 
     const appointment =
         details?.appointment;
@@ -382,26 +228,16 @@ export function AppointmentDetailsDrawer({
         details?.prediction;
 
     const recommendation =
-        details?.recommendation;
+        details?.recommendation ?? null;
 
     const recovery =
         details?.recovery_summary;
 
     const score =
         prediction?.turn_risk_score ??
-        selectedAppointment.turn_risk_score ??
+        selectedAppointment
+            .turn_risk_score ??
         0;
-
-    const actionCount =
-        details?.recommendation_actions
-            .length ?? 0;
-
-    const allActionsSelected =
-        actionCount > 0 &&
-        selectedActionIds.size === actionCount;
-
-
-
 
     return (
         <>
@@ -428,7 +264,8 @@ export function AppointmentDetailsDrawer({
 
                         <p>
                             {appointment?.customer_name ??
-                                selectedAppointment.customer_name ??
+                                selectedAppointment
+                                    .customer_name ??
                                 "Unknown customer"}
                         </p>
                     </div>
@@ -439,8 +276,16 @@ export function AppointmentDetailsDrawer({
                                 <button
                                     type="button"
                                     className="secondary-button appointment-drawer-action"
-                                    disabled={details.appointment.status === "Completed"}
-                                    onClick={() => setEditAppointmentOpen(true)}
+                                    disabled={
+                                        details.appointment
+                                            .status ===
+                                        "Completed"
+                                    }
+                                    onClick={() =>
+                                        setEditAppointmentOpen(
+                                            true,
+                                        )
+                                    }
                                 >
                                     Edit appointment
                                 </button>
@@ -449,14 +294,31 @@ export function AppointmentDetailsDrawer({
                                     type="button"
                                     className="secondary-button appointment-drawer-action"
                                     disabled={
-                                        details.appointment.status === "Arrived" ||
-                                        details.appointment.status === "Waiting" ||
-                                        details.appointment.status === "Dock Assigned" ||
-                                        details.appointment.status === "In Progress" ||
-                                        details.appointment.status === "Completed" ||
-                                        Boolean(details.appointment.actual_arrival_time)
+                                        details.appointment
+                                            .status ===
+                                        "Arrived" ||
+                                        details.appointment
+                                            .status ===
+                                        "Waiting" ||
+                                        details.appointment
+                                            .status ===
+                                        "Dock Assigned" ||
+                                        details.appointment
+                                            .status ===
+                                        "In Progress" ||
+                                        details.appointment
+                                            .status ===
+                                        "Completed" ||
+                                        Boolean(
+                                            details.appointment
+                                                .actual_arrival_time,
+                                        )
                                     }
-                                    onClick={() => setRescheduleAppointmentOpen(true)}
+                                    onClick={() =>
+                                        setRescheduleAppointmentOpen(
+                                            true,
+                                        )
+                                    }
                                 >
                                     Reschedule
                                 </button>
@@ -487,1008 +349,217 @@ export function AppointmentDetailsDrawer({
                         </section>
                     )}
 
-                    {!loading && details && (
-                        <>
-                            <section className="drawer-section appointment-operational-intelligence-section">
-                                {appointment && recovery && (
+                    {!loading &&
+                        details &&
+                        appointment &&
+                        recovery && (
+                            <>
+                                <section className="drawer-section appointment-operational-intelligence-section">
                                     <AppointmentOperationalIntelligence
-                                        appointment={appointment}
-                                        prediction={prediction ?? null}
+                                        appointment={
+                                            appointment
+                                        }
+                                        prediction={
+                                            prediction ?? null
+                                        }
                                         recovery={recovery}
                                     />
-                                )}
-                            </section>
+                                </section>
 
+                                <AppointmentRiskAssessment
+                                    appointment={
+                                        appointment
+                                    }
+                                    prediction={
+                                        prediction ?? null
+                                    }
+                                    recovery={recovery}
+                                    recommendation={
+                                        recommendation
+                                    }
+                                    score={score}
+                                />
 
-                            <section className="drawer-section risk-assessment-section">
-                                <span className="drawer-section-label">
-                                    AI risk assessment
-                                </span>
+                                <AppointmentRecoveryPlan
+                                    actions={
+                                        details
+                                            .recommendation_actions
+                                    }
+                                    recovery={recovery}
+                                    selectedActionIds={
+                                        selectedActionIds
+                                    }
+                                    savingDecision={
+                                        savingDecision
+                                    }
+                                    onToggleAction={
+                                        toggleActionSelection
+                                    }
+                                    onSelectAll={
+                                        selectAllActions
+                                    }
+                                    onClearSelection={
+                                        clearActionSelection
+                                    }
+                                />
 
-                                <div className="risk-assessment-grid">
-                                    <div>
-                                        <span>Risk score</span>
+                                <AppointmentWhatIfPanel
+                                    simulation={
+                                        whatIfSimulation
+                                    }
+                                    loading={
+                                        whatIfLoading
+                                    }
+                                    error={whatIfError}
+                                    extraLoaders={
+                                        extraLoaders
+                                    }
+                                    setExtraLoaders={
+                                        setExtraLoaders
+                                    }
+                                    extraForklifts={
+                                        extraForklifts
+                                    }
+                                    setExtraForklifts={
+                                        setExtraForklifts
+                                    }
+                                    preStageProducts={
+                                        preStageProducts
+                                    }
+                                    setPreStageProducts={
+                                        setPreStageProducts
+                                    }
+                                />
 
-                                        <strong>
-                                            {score}
-                                            <small>/100</small>
-                                        </strong>
-                                    </div>
+                                <ShipmentItemsTable
+                                    products={
+                                        details.products
+                                    }
+                                />
 
-                                    <div>
-                                        <span>
-                                            SLA miss probability
-                                        </span>
+                                <AppointmentEventHistory
+                                    events={details.events}
+                                />
 
-                                        <strong>
-                                            {formatPercent(
-                                                prediction
-                                                    ?.sla_miss_probability,
-                                            )}
-                                        </strong>
-                                    </div>
-
-                                    <div>
-                                        <span>Predicted turn</span>
-
-                                        <strong>
-                                            {recovery
-                                                ?.predicted_turn_time_minutes ??
-                                                "—"}
-                                            <small> min</small>
-                                        </strong>
-                                    </div>
-
-                                    <div>
-                                        <span>Target SLA</span>
-
-                                        <strong>
-                                            {recovery?.sla_minutes ??
-                                                appointment?.sla_minutes ??
-                                                "—"}
-                                            <small> min</small>
-                                        </strong>
-                                    </div>
-                                </div>
-
-                                <div className="comparison-grid">
-                                    <div className="comparison-card">
-                                        <span>
-                                            Without recovery plan
-                                        </span>
-
-                                        <strong>
-                                            {recovery
-                                                ?.predicted_turn_time_minutes ??
-                                                "—"}{" "}
-                                            min
-                                        </strong>
-
-                                        <small>
-                                            {prediction?.predicted_missed
-                                                ? "SLA miss predicted"
-                                                : "SLA currently achievable"}
-                                        </small>
-                                    </div>
-
-                                    <div className="comparison-card recovered">
-                                        <span>
-                                            Full AI recovery plan
-                                        </span>
-
-                                        <strong>
-                                            {recovery
-                                                ?.proposed_projected_turn_time_minutes ??
-                                                recovery
-                                                    ?.projected_turn_time_minutes ??
-                                                "—"}{" "}
-                                            min
-                                        </strong>
-
-                                        <small>
-                                            {(
-                                                recovery
-                                                    ?.proposed_sla_recovered ??
-                                                recovery?.sla_recovered ??
-                                                false
-                                            )
-                                                ? "SLA recovered"
-                                                : "Further action required"}
-                                        </small>
-                                    </div>
-                                </div>
-
-                                <div className="comparison-grid">
-                                    <div className="comparison-card">
-                                        <span>
-                                            Currently accepted actions
-                                        </span>
-
-                                        <strong>
-                                            {recovery
-                                                ?.accepted_projected_turn_time_minutes ??
-                                                recovery
-                                                    ?.predicted_turn_time_minutes ??
-                                                "—"}{" "}
-                                            min
-                                        </strong>
-
-                                        <small>
-                                            {recovery
-                                                ?.accepted_sla_recovered
-                                                ? "Accepted actions recover SLA"
-                                                : "Additional actions may be required"}
-                                        </small>
-                                    </div>
-
-                                    <div className="comparison-card recovered">
-                                        <span>
-                                            Accepted minutes saved
-                                        </span>
-
-                                        <strong>
-                                            {recovery
-                                                ?.accepted_minutes_saved ??
-                                                0}{" "}
-                                            min
-                                        </strong>
-
-                                        <small>
-                                            Based only on accepted actions
-                                        </small>
-                                    </div>
-                                </div>
-                            </section>
-
-
-                            <section className="drawer-section">
-                                <span className="drawer-section-label">
-                                    Root causes
-                                </span>
-
-                                <h3>
-                                    Why this appointment is at risk
-                                </h3>
-
-                                <ul className="root-cause-list">
-                                    {(appointment
-                                        ?.actual_arrival_delay_minutes ??
-                                        prediction
-                                            ?.predicted_delay_minutes ??
-                                        0) > 0 && (
-                                            <li>
-                                                Carrier is expected or
-                                                recorded{" "}
-                                                <strong>
-                                                    {appointment
-                                                        ?.actual_arrival_delay_minutes ??
-                                                        prediction
-                                                            ?.predicted_delay_minutes}{" "}
-                                                    minutes late
-                                                </strong>
-                                                .
-                                            </li>
-                                        )}
-
-                                    {(appointment?.pallet_count ??
-                                        0) >= 25 && (
-                                            <li>
-                                                High load volume of{" "}
-                                                <strong>
-                                                    {appointment?.pallet_count}{" "}
-                                                    pallets
-                                                </strong>{" "}
-                                                increases handling time.
-                                            </li>
-                                        )}
-
-                                    {(appointment?.sku_count ??
-                                        0) >= 7 && (
-                                            <li>
-                                                The appointment contains{" "}
-                                                <strong>
-                                                    {appointment?.sku_count}{" "}
-                                                    SKUs
-                                                </strong>
-                                                , increasing staging and
-                                                verification effort.
-                                            </li>
-                                        )}
-
-                                    {(appointment
-                                        ?.traffic_severity ??
-                                        0) >= 3 && (
-                                            <li>
-                                                Traffic conditions are
-                                                elevated at{" "}
-                                                <strong>
-                                                    severity{" "}
-                                                    {
-                                                        appointment
-                                                            ?.traffic_severity
-                                                    }
-                                                </strong>
-                                                .
-                                            </li>
-                                        )}
-
-                                    {(appointment
-                                        ?.weather_severity ??
-                                        0) >= 3 && (
-                                            <li>
-                                                Weather conditions may
-                                                affect arrival and handling
-                                                operations.
-                                            </li>
-                                        )}
-
-                                    {appointment
-                                        ?.surge_indicator && (
-                                            <li>
-                                                The facility is operating
-                                                under a surge-volume
-                                                condition.
-                                            </li>
-                                        )}
-                                </ul>
-                            </section>
-
-
-                            <section className="drawer-section">
-                                <div className="drawer-section-heading">
-                                    <div>
-                                        <span className="drawer-section-label">
-                                            AI recovery plan
-                                        </span>
-
-                                        <h3>
-                                            Warehouse actions
-                                        </h3>
-                                    </div>
-
-                                    <div className="minutes-saved">
-                                        <strong>
-                                            {recovery
-                                                ?.proposed_minutes_saved ??
-                                                recovery
-                                                    ?.total_minutes_saved ??
-                                                0}
-                                        </strong>
-
-                                        <span>
-                                            proposed minutes saved
-                                        </span>
-                                    </div>
-                                </div>
-
-                                {actionCount > 0 && (
-                                    <div className="drawer-selection-toolbar">
-                                        <span>
-                                            {selectedActionIds.size} of{" "}
-                                            {actionCount} selected
-                                        </span>
-
-                                        <button
-                                            type="button"
-                                            onClick={
-                                                allActionsSelected
-                                                    ? clearActionSelection
-                                                    : selectAllActions
-                                            }
-                                            disabled={savingDecision}
-                                        >
-                                            {allActionsSelected
-                                                ? "Clear all"
-                                                : "Select all"}
-                                        </button>
-
-                                        <button
-                                            type="button"
-                                            onClick={
-                                                clearActionSelection
-                                            }
-                                            disabled={
-                                                savingDecision ||
-                                                selectedActionIds.size ===
-                                                0
-                                            }
-                                        >
-                                            Clear selection
-                                        </button>
-                                    </div>
-                                )}
-
-                                <div className="recovery-action-list">
-                                    {details.recommendation_actions.map(
-                                        (action) => {
-                                            const decisionStatus =
-                                                action.decision_status ??
-                                                "Pending";
-
-                                            return (
-                                                <article
-                                                    key={
-                                                        action
-                                                            .recommendation_action_id
-                                                    }
-                                                    className={`recovery-action-card decision-${decisionStatus.toLowerCase()}`}
-                                                >
-                                                    <label className="action-selection">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={selectedActionIds.has(
-                                                                action
-                                                                    .recommendation_action_id,
-                                                            )}
-                                                            disabled={
-                                                                savingDecision
-                                                            }
-                                                            onChange={() =>
-                                                                toggleActionSelection(
-                                                                    action
-                                                                        .recommendation_action_id,
-                                                                )
-                                                            }
-                                                            aria-label={`Select ${action.action_title}`}
-                                                        />
-                                                    </label>
-
-                                                    <div className="action-sequence">
-                                                        {
-                                                            action.sequence_number
-                                                        }
-                                                    </div>
-
-                                                    <div className="action-content">
-                                                        <div className="action-title-row">
-                                                            <h4>
-                                                                {
-                                                                    action.action_title
-                                                                }
-                                                            </h4>
-
-                                                            <div className="action-title-actions">
-                                                                <span
-                                                                    className={`decision-badge ${decisionStatus.toLowerCase()}`}
-                                                                >
-                                                                    {decisionStatus}
-                                                                </span>
-
-                                                                <span className="action-minutes">
-                                                                    +
-                                                                    {
-                                                                        action
-                                                                            .estimated_minutes_saved
-                                                                    }{" "}
-                                                                    min
-                                                                </span>
-                                                            </div>
-                                                        </div>
-
-                                                        <p>
-                                                            {action.action_description}
-                                                        </p>
-
-                                                        {action.recommendation_reason && (
-                                                            <p className="action-recommendation-reason">
-                                                                <strong>Why recommended: </strong>
-                                                                {action.recommendation_reason}
-                                                            </p>
-                                                        )}
-
-                                                        <div className="action-meta">
-                                                            <span>
-                                                                Owner:{" "}
-                                                                {action.owner_role ??
-                                                                    "Warehouse team"}
-                                                            </span>
-
-                                                            <span>
-                                                                {actionResourceSummary(
-                                                                    action,
-                                                                )}
-                                                            </span>
-
-                                                            {action.start_by && (
-                                                                <span>
-                                                                    Start by:{" "}
-                                                                    {formatDate(
-                                                                        action.start_by,
-                                                                    )}
-                                                                </span>
-                                                            )}
-
-                                                            {action.decision_by && (
-                                                                <span>
-                                                                    Decision by:{" "}
-                                                                    {
-                                                                        action
-                                                                            .decision_by
-                                                                    }
-                                                                </span>
-                                                            )}
-
-                                                            {action.decision_at && (
-                                                                <span>
-                                                                    Decision at:{" "}
-                                                                    {formatDate(
-                                                                        action
-                                                                            .decision_at,
-                                                                    )}
-                                                                </span>
-                                                            )}
-                                                        </div>
-
-                                                        {action.decision_notes && (
-                                                            <p className="decision-notes">
-                                                                {
-                                                                    action
-                                                                        .decision_notes
-                                                                }
-                                                            </p>
-                                                        )}
-                                                    </div>
-                                                </article>
-                                            );
-                                        },
+                                <AppointmentCopilot
+                                    appointmentId={
+                                        selectedAppointment.appt_id
+                                    }
+                                    recommendationId={
+                                        recommendation
+                                            ?.recommendation_id ??
+                                        null
+                                    }
+                                    recommendationActions={
+                                        details
+                                            .recommendation_actions
+                                    }
+                                    selectedActionIds={Array.from(
+                                        selectedActionIds,
                                     )}
+                                    extraLoaders={
+                                        extraLoaders
+                                    }
+                                    extraForklifts={
+                                        extraForklifts
+                                    }
+                                    preStageProducts={
+                                        preStageProducts
+                                    }
+                                    onRefresh={onRefresh}
+                                />
 
-                                    {actionCount === 0 && (
-                                        <p>
-                                            No structured recovery
-                                            actions have been generated.
-                                        </p>
-                                    )}
-                                </div>
-                            </section>
-
-
-                            <section className="drawer-section impact-panel">
-                                <div className="drawer-section-heading">
-                                    <div>
-                                        <span className="drawer-section-label">
-                                            Live What-If simulation
-                                        </span>
-
-                                        <h3>
-                                            Impact of selected actions
-                                        </h3>
-                                    </div>
-
-                                    {whatIfSimulation && (
-                                        <span
-                                            className={`impact-status ${whatIfSimulation.scenario
-                                                .sla_recovered
-                                                ? "recovered"
-                                                : "at-risk"
-                                                }`}
-                                        >
-                                            {whatIfSimulation.scenario
-                                                .sla_recovered
-                                                ? "SLA recovered"
-                                                : "SLA at risk"}
-                                        </span>
-                                    )}
-                                </div>
-
-                                <div className="what-if-controls">
-                                    <label className="what-if-number-control">
-                                        <span>Extra loaders</span>
-                                        <div>
-                                            <button
-                                                type="button"
-                                                disabled={extraLoaders <= 0}
-                                                onClick={() =>
-                                                    setExtraLoaders((current) =>
-                                                        Math.max(0, current - 1),
-                                                    )
-                                                }
-                                                aria-label="Remove one extra loader"
-                                            >
-                                                −
-                                            </button>
-                                            <strong>{extraLoaders}</strong>
-                                            <button
-                                                type="button"
-                                                disabled={extraLoaders >= 5}
-                                                onClick={() =>
-                                                    setExtraLoaders((current) =>
-                                                        Math.min(5, current + 1),
-                                                    )
-                                                }
-                                                aria-label="Add one extra loader"
-                                            >
-                                                +
-                                            </button>
-                                        </div>
-                                    </label>
-
-                                    <label className="what-if-number-control">
-                                        <span>Extra forklifts</span>
-                                        <div>
-                                            <button
-                                                type="button"
-                                                disabled={extraForklifts <= 0}
-                                                onClick={() =>
-                                                    setExtraForklifts((current) =>
-                                                        Math.max(0, current - 1),
-                                                    )
-                                                }
-                                                aria-label="Remove one extra forklift"
-                                            >
-                                                −
-                                            </button>
-                                            <strong>{extraForklifts}</strong>
-                                            <button
-                                                type="button"
-                                                disabled={extraForklifts >= 5}
-                                                onClick={() =>
-                                                    setExtraForklifts((current) =>
-                                                        Math.min(5, current + 1),
-                                                    )
-                                                }
-                                                aria-label="Add one extra forklift"
-                                            >
-                                                +
-                                            </button>
-                                        </div>
-                                    </label>
-
-                                    <label className="what-if-toggle-control">
-                                        <input
-                                            type="checkbox"
-                                            checked={preStageProducts}
-                                            onChange={(event) =>
-                                                setPreStageProducts(
-                                                    event.target.checked,
-                                                )
-                                            }
-                                        />
-                                        <span>Pre-stage products</span>
-                                    </label>
-                                </div>
-
-                                {whatIfLoading && (
-                                    <div className="simulation-state">
-                                        Running operational simulation...
-                                    </div>
-                                )}
-
-                                {whatIfError && (
+                                {decisionError && (
                                     <div className="table-error">
-                                        {whatIfError}
+                                        {decisionError}
                                     </div>
                                 )}
 
-                                {!whatIfLoading &&
-                                    !whatIfError &&
-                                    whatIfSimulation && (
-                                        <>
-                                            <div className="impact-comparison">
-                                                <div className="impact-column">
-                                                    <span>
-                                                        Without recovery actions
-                                                    </span>
-                                                    <strong>
-                                                        {
-                                                            whatIfSimulation
-                                                                .baseline
-                                                                .predicted_turn_time_minutes
-                                                        }
-                                                        <small> min</small>
-                                                    </strong>
-                                                    <p>
-                                                        Risk score{" "}
-                                                        {
-                                                            whatIfSimulation
-                                                                .baseline
-                                                                .turn_risk_score
-                                                        }
-                                                        /100
-                                                    </p>
-                                                </div>
+                                <div className="drawer-action-bar">
+                                    <button
+                                        type="button"
+                                        className="primary-button"
+                                        disabled={
+                                            savingDecision ||
+                                            selectedActionIds.size ===
+                                            0
+                                        }
+                                        onClick={() =>
+                                            void applyDecision(
+                                                "Accepted",
+                                            )
+                                        }
+                                    >
+                                        {savingDecision
+                                            ? "Saving..."
+                                            : "Accept selected"}
+                                    </button>
 
-                                                <div className="impact-arrow">→</div>
+                                    <button
+                                        type="button"
+                                        className="secondary-button"
+                                        disabled={
+                                            savingDecision ||
+                                            selectedActionIds.size ===
+                                            0
+                                        }
+                                        onClick={() =>
+                                            void applyDecision(
+                                                "Rejected",
+                                            )
+                                        }
+                                    >
+                                        Reject selected
+                                    </button>
 
-                                                <div className="impact-column preview">
-                                                    <span>
-                                                        With simulated plan
-                                                    </span>
-                                                    <strong>
-                                                        {
-                                                            whatIfSimulation
-                                                                .scenario
-                                                                .projected_turn_time_minutes
-                                                        }
-                                                        <small> min</small>
-                                                    </strong>
-                                                    <p>
-                                                        {whatIfSimulation
-                                                            .scenario
-                                                            .sla_recovered
-                                                            ? `${Math.max(
-                                                                0,
-                                                                whatIfSimulation
-                                                                    .baseline
-                                                                    .sla_minutes -
-                                                                whatIfSimulation
-                                                                    .scenario
-                                                                    .projected_turn_time_minutes,
-                                                            )} minutes within SLA`
-                                                            : `${Math.max(
-                                                                0,
-                                                                whatIfSimulation
-                                                                    .scenario
-                                                                    .projected_turn_time_minutes -
-                                                                whatIfSimulation
-                                                                    .baseline
-                                                                    .sla_minutes,
-                                                            )} minutes above SLA`}
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            <div className="impact-metrics-grid">
-                                                <div>
-                                                    <span>Selected AI actions</span>
-                                                    <strong>
-                                                        {
-                                                            whatIfSimulation
-                                                                .selected_action_ids
-                                                                .length
-                                                        }
-                                                    </strong>
-                                                </div>
-                                                <div>
-                                                    <span>Total minutes saved</span>
-                                                    <strong>
-                                                        {
-                                                            whatIfSimulation
-                                                                .scenario
-                                                                .minutes_saved
-                                                        }{" "}
-                                                        min
-                                                    </strong>
-                                                </div>
-                                                <div>
-                                                    <span>Projected risk score</span>
-                                                    <strong>
-                                                        {
-                                                            whatIfSimulation
-                                                                .scenario
-                                                                .projected_risk_score
-                                                        }
-                                                        /100
-                                                    </strong>
-                                                </div>
-                                                <div>
-                                                    <span>Recovery probability</span>
-                                                    <strong>
-                                                        {formatPercent(
-                                                            whatIfSimulation
-                                                                .scenario
-                                                                .projected_recovery_probability,
-                                                        )}
-                                                    </strong>
-                                                </div>
-                                                <div>
-                                                    <span>Action cost</span>
-                                                    <strong>
-                                                        {formatCurrency(
-                                                            whatIfSimulation
-                                                                .scenario
-                                                                .action_cost,
-                                                        )}
-                                                    </strong>
-                                                </div>
-                                                <div>
-                                                    <span>Gross savings</span>
-                                                    <strong>
-                                                        {formatCurrency(
-                                                            whatIfSimulation
-                                                                .scenario
-                                                                .gross_savings,
-                                                        )}
-                                                    </strong>
-                                                </div>
-                                                <div>
-                                                    <span>Projected detention</span>
-                                                    <strong>
-                                                        {formatCurrency(
-                                                            whatIfSimulation
-                                                                .scenario
-                                                                .projected_detention_exposure,
-                                                        )}
-                                                    </strong>
-                                                </div>
-                                                <div>
-                                                    <span>Net savings</span>
-                                                    <strong
-                                                        className={
-                                                            whatIfSimulation
-                                                                .scenario
-                                                                .net_savings >= 0
-                                                                ? "positive-impact"
-                                                                : "negative-impact"
-                                                        }
-                                                    >
-                                                        {formatCurrency(
-                                                            whatIfSimulation
-                                                                .scenario
-                                                                .net_savings,
-                                                        )}
-                                                    </strong>
-                                                </div>
-                                            </div>
-
-                                            <div className="sla-progress">
-                                                <div className="sla-progress-heading">
-                                                    <span>Projected SLA usage</span>
-                                                    <strong>
-                                                        {Math.round(
-                                                            (whatIfSimulation
-                                                                .scenario
-                                                                .projected_turn_time_minutes /
-                                                                whatIfSimulation
-                                                                    .baseline
-                                                                    .sla_minutes) *
-                                                            100,
-                                                        )}
-                                                        %
-                                                    </strong>
-                                                </div>
-
-                                                <div className="sla-progress-track">
-                                                    <div
-                                                        className={`sla-progress-fill ${whatIfSimulation
-                                                            .scenario
-                                                            .sla_recovered
-                                                            ? "recovered"
-                                                            : "at-risk"
-                                                            }`}
-                                                        style={{
-                                                            width: `${Math.min(
-                                                                100,
-                                                                Math.round(
-                                                                    (whatIfSimulation
-                                                                        .scenario
-                                                                        .projected_turn_time_minutes /
-                                                                        whatIfSimulation
-                                                                            .baseline
-                                                                            .sla_minutes) *
-                                                                    100,
-                                                                ),
-                                                            )}%`,
-                                                        }}
-                                                    />
-                                                </div>
-
-                                                <div className="sla-progress-labels">
-                                                    <span>0 min</span>
-                                                    <span>
-                                                        SLA target:{" "}
-                                                        {
-                                                            whatIfSimulation
-                                                                .baseline
-                                                                .sla_minutes
-                                                        }{" "}
-                                                        min
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </>
-                                    )}
-
-                                {!whatIfLoading &&
-                                    !whatIfError &&
-                                    !whatIfSimulation && (
-                                        <div className="simulation-state">
-                                            Select recovery actions or adjust
-                                            warehouse resources to run a
-                                            simulation.
-                                        </div>
-                                    )}
-                            </section>
-
-                            <section className="drawer-section recovery-value-section">
-                                <span className="drawer-section-label">
-                                    Financial impact
-                                </span>
-
-                                <div className="details-grid">
-                                    <div>
-                                        <span>
-                                            Loss without action
-                                        </span>
-
-                                        <strong>
-                                            {formatCurrency(
-                                                recommendation
-                                                    ?.estimated_loss_without_action,
-                                            )}
-                                        </strong>
-                                    </div>
-
-                                    <div>
-                                        <span>
-                                            Accepted action cost
-                                        </span>
-
-                                        <strong>
-                                            {formatCurrency(
-                                                recovery
-                                                    ?.accepted_action_cost ??
-                                                recommendation
-                                                    ?.estimated_cost_of_action,
-                                            )}
-                                        </strong>
-                                    </div>
-
-                                    <div>
-                                        <span>
-                                            Estimated savings
-                                        </span>
-
-                                        <strong>
-                                            {formatCurrency(
-                                                recommendation
-                                                    ?.estimated_savings,
-                                            )}
-                                        </strong>
-                                    </div>
-
-                                    <div>
-                                        <span>
-                                            Recovery probability
-                                        </span>
-
-                                        <strong>
-                                            {formatPercent(
-                                                prediction
-                                                    ?.sla_recovery_probability,
-                                            )}
-                                        </strong>
-                                    </div>
+                                    <button
+                                        type="button"
+                                        className="secondary-button"
+                                        disabled={
+                                            savingDecision ||
+                                            selectedActionIds.size ===
+                                            0
+                                        }
+                                        onClick={() =>
+                                            void applyDecision(
+                                                "Pending",
+                                            )
+                                        }
+                                    >
+                                        Reset to pending
+                                    </button>
                                 </div>
-                            </section>
-
-
-                            <ShipmentItemsTable
-                                products={details.products}
-                            />
-
-
-                            <section className="drawer-section">
-                                <span className="drawer-section-label">
-                                    Operational timeline
-                                </span>
-
-                                <h3>
-                                    Appointment events
-                                </h3>
-
-                                <div className="timeline">
-                                    {details.events.map((event) => {
-                                        const eventClass = event.event_type
-                                            .toLowerCase()
-                                            .replaceAll("_", "-");
-
-                                        return (
-                                            <div
-                                                key={`${event.event_type}-${event.event_id}`}
-                                                className={`timeline-item timeline-${eventClass}`}
-                                            >
-                                                <div className="timeline-marker" />
-
-                                                <div>
-                                                    <strong>
-                                                        {formatEventType(
-                                                            event.event_type,
-                                                        )}
-                                                    </strong>
-
-                                                    <span>
-                                                        {formatDate(
-                                                            event.event_time,
-                                                        )}
-                                                    </span>
-
-                                                    {event.notes && (
-                                                        <p>{event.notes}</p>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-
-                                    {details.events.length === 0 && (
-                                        <p className="timeline-empty">
-                                            No operational events are available.
-                                        </p>
-                                    )}
-                                </div>
-                            </section>
-
-
-                            <AppointmentCopilot appointmentId={selectedAppointment.appt_id} recommendationId={recommendation?.recommendation_id ?? null} recommendationActions={details.recommendation_actions} selectedActionIds={Array.from(selectedActionIds)} extraLoaders={extraLoaders} extraForklifts={extraForklifts} preStageProducts={preStageProducts} onRefresh={onRefresh} />
-
-                            {decisionError && (
-                                <div className="table-error">
-                                    {decisionError}
-                                </div>
-                            )}
-
-                            <div className="drawer-action-bar">
-                                <button
-                                    type="button"
-                                    className="primary-button"
-                                    disabled={
-                                        savingDecision ||
-                                        selectedActionIds.size === 0
-                                    }
-                                    onClick={() =>
-                                        void applyDecision(
-                                            "Accepted",
-                                        )
-                                    }
-                                >
-                                    {savingDecision
-                                        ? "Saving..."
-                                        : "Accept selected"}
-                                </button>
-
-                                <button
-                                    type="button"
-                                    className="secondary-button"
-                                    disabled={
-                                        savingDecision ||
-                                        selectedActionIds.size === 0
-                                    }
-                                    onClick={() =>
-                                        void applyDecision(
-                                            "Rejected",
-                                        )
-                                    }
-                                >
-                                    Reject selected
-                                </button>
-
-                                <button
-                                    type="button"
-                                    className="secondary-button"
-                                    disabled={
-                                        savingDecision ||
-                                        selectedActionIds.size === 0
-                                    }
-                                    onClick={() =>
-                                        void applyDecision(
-                                            "Pending",
-                                        )
-                                    }
-                                >
-                                    Reset to pending
-                                </button>
-                            </div>
-                        </>
-                    )}
+                            </>
+                        )}
                 </div>
             </aside>
+
             {details && (
                 <>
                     <EditAppointmentDialog
-                        open={editAppointmentOpen}
+                        open={
+                            editAppointmentOpen
+                        }
                         details={details}
                         onClose={() =>
-                            setEditAppointmentOpen(false)
+                            setEditAppointmentOpen(
+                                false,
+                            )
                         }
                         onSaved={onRefresh}
                     />
 
                     <RescheduleAppointmentDialog
-                        open={rescheduleAppointmentOpen}
-                        appointment={details.appointment}
+                        open={
+                            rescheduleAppointmentOpen
+                        }
+                        appointment={
+                            details.appointment
+                        }
                         onClose={() =>
-                            setRescheduleAppointmentOpen(false)
+                            setRescheduleAppointmentOpen(
+                                false,
+                            )
                         }
                         onSaved={onRefresh}
                     />

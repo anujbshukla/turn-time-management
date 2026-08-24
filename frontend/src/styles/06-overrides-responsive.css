@@ -2108,3 +2108,186 @@ body {
   width: min(860px, 92vw);
   max-width: 860px;
 }
+
+/* ==========================================================
+   AI Mission Center card grid placement
+   Prevents execution-plan content from taking over the
+   mission action column.
+========================================================== */
+
+.ai-mission-card {
+  align-items: start;
+}
+
+/*
+  Explicit first-row placement:
+
+  column 1 = priority
+  column 2 = mission details
+  column 3 = mission controls
+*/
+.ai-mission-card>.ai-mission-priority {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.ai-mission-card>.ai-mission-content {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.ai-mission-card>.ai-mission-card-actions {
+  grid-column: 3;
+  grid-row: 1;
+  display: flex;
+  align-self: start;
+  align-content: flex-start;
+  align-items: stretch;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 7px;
+  min-width: 0;
+}
+
+/* Keep all mission control buttons aligned and full width. */
+.ai-mission-card>.ai-mission-card-actions button {
+  width: 100%;
+  min-height: 34px;
+  margin: 0;
+  justify-content: center;
+}
+
+/* Quiet/Dismiss still uses the same action-column footprint. */
+.ai-mission-card>.ai-mission-card-actions button.quiet {
+  width: 100%;
+}
+
+/*
+  The coordinated execution plan belongs below the mission
+  description, not in the action column.
+*/
+.ai-mission-card>.ai-mission-execution-plan {
+  grid-column: 2 / -1;
+  grid-row: auto;
+  width: 100%;
+  min-width: 0;
+  margin-top: 2px;
+}
+
+/* Make execution-plan rows use the available horizontal space. */
+.ai-mission-card>.ai-mission-execution-plan button {
+  grid-template-columns:
+    minmax(150px, 1fr) auto;
+  width: 100%;
+}
+
+/*
+  Expanded secondary panels should also start beneath the
+  priority column rather than causing the top row to shift.
+*/
+.ai-mission-card>.mission-what-if-panel,
+.ai-mission-card>.mission-realized-panel {
+  grid-column: 2 / -1;
+  width: 100%;
+  min-width: 0;
+}
+
+/* Medium-width layouts */
+@media (max-width: 1180px) {
+  .ai-mission-card {
+    grid-template-columns:
+      58px minmax(0, 1fr) 148px;
+    gap: 12px;
+  }
+
+  .ai-mission-card>.ai-mission-card-actions {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .ai-mission-card>.ai-mission-execution-plan,
+  .ai-mission-card>.mission-what-if-panel,
+  .ai-mission-card>.mission-realized-panel {
+    grid-column: 2 / -1;
+  }
+}
+
+/*
+  On smaller screens, change to a true stacked card instead
+  of forcing the narrow three-column desktop layout.
+*/
+@media (max-width: 760px) {
+  .ai-mission-card {
+    grid-template-columns:
+      52px minmax(0, 1fr);
+  }
+
+  .ai-mission-card>.ai-mission-priority {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .ai-mission-card>.ai-mission-content {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .ai-mission-card>.ai-mission-card-actions {
+    grid-column: 2;
+    grid-row: auto;
+    display: grid;
+    grid-template-columns:
+      repeat(2,
+        minmax(0, 1fr));
+  }
+
+  .ai-mission-card>.ai-mission-execution-plan,
+  .ai-mission-card>.mission-what-if-panel,
+  .ai-mission-card>.mission-realized-panel {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Phone layout */
+@media (max-width: 520px) {
+  .ai-mission-card {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-mission-card>.ai-mission-priority {
+    grid-column: 1;
+    grid-row: auto;
+    align-items: center;
+    justify-content: flex-start;
+    flex-direction: row;
+    gap: 8px;
+    padding-bottom: 8px;
+    border-right: 0;
+    border-bottom: 1px solid #edf1f5;
+  }
+
+  .ai-mission-card>.ai-mission-priority strong {
+    margin: 0;
+    font-size: 18px;
+  }
+
+  .ai-mission-card>.ai-mission-content,
+  .ai-mission-card>.ai-mission-card-actions,
+  .ai-mission-card>.ai-mission-execution-plan,
+  .ai-mission-card>.mission-what-if-panel,
+  .ai-mission-card>.mission-realized-panel {
+    grid-column: 1;
+  }
+
+  .ai-mission-card>.ai-mission-card-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-mission-card>.ai-mission-execution-plan button {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-mission-card>.ai-mission-execution-plan button small {
+    grid-column: 1;
+  }
+}

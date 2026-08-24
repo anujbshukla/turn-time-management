@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { getAppointmentReferenceData } from "../services/appointments";
 import type { AppointmentReferenceData } from "../types/appointments";
-import type { ComparisonMode, DatePreset, DashboardQueryFilters, OperationsFilters } from "../types/operationsFilters";
+import type { ComparisonMode, DatePreset, DashboardQueryFilters, OperationsFilters, } from "../types/appointments";
 
 const emptyReferenceData: AppointmentReferenceData = {
   facilities: [], customers: [], carriers: [], docks: [], products: [],

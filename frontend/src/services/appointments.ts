@@ -11,6 +11,15 @@ import type {
   UpdateAppointmentResponse,
 } from "../types/appointments";
 
+import type {
+  AppointmentDetailsResponse,
+} from "../types/appointmentDetails";
+
+import type {
+  WhatIfRequest,
+  WhatIfResponse,
+} from "../types/whatIf";
+
 /* ----------------------------------------------------- */
 /* Existing API model                                    */
 /* ----------------------------------------------------- */
@@ -34,7 +43,7 @@ export interface AppointmentApiModel {
 const API_BASE_URL = "http://127.0.0.1:8000";
 
 /* ----------------------------------------------------- */
-/* Existing endpoint                                     */
+/* Appointment list                                      */
 /* ----------------------------------------------------- */
 
 export async function getAppointments(): Promise<
@@ -54,7 +63,7 @@ export async function getAppointments(): Promise<
 }
 
 /* ----------------------------------------------------- */
-/* Paginated endpoint                                    */
+/* Paginated appointment queue                           */
 /* ----------------------------------------------------- */
 
 export async function getPaginatedAppointments(
@@ -82,31 +91,52 @@ export async function getPaginatedAppointments(
   }
 
   if (query.appointmentType) {
-    params.set("appointment_type", query.appointmentType);
+    params.set(
+      "appointment_type",
+      query.appointmentType,
+    );
   }
 
   if (query.dateFrom) {
-    params.set("date_from", query.dateFrom.split("T")[0]);
+    params.set(
+      "date_from",
+      query.dateFrom.split("T")[0],
+    );
   }
 
   if (query.dateTo) {
-    params.set("date_to", query.dateTo.split("T")[0]);
+    params.set(
+      "date_to",
+      query.dateTo.split("T")[0],
+    );
   }
 
   if (query.palletMin !== undefined) {
-    params.set("pallet_min", String(query.palletMin));
+    params.set(
+      "pallet_min",
+      String(query.palletMin),
+    );
   }
 
   if (query.palletMax !== undefined) {
-    params.set("pallet_max", String(query.palletMax));
+    params.set(
+      "pallet_max",
+      String(query.palletMax),
+    );
   }
 
   if (query.skuMin !== undefined) {
-    params.set("sku_min", String(query.skuMin));
+    params.set(
+      "sku_min",
+      String(query.skuMin),
+    );
   }
 
   if (query.skuMax !== undefined) {
-    params.set("sku_max", String(query.skuMax));
+    params.set(
+      "sku_max",
+      String(query.skuMax),
+    );
   }
 
   if (query.status) {
@@ -114,7 +144,10 @@ export async function getPaginatedAppointments(
   }
 
   if (query.riskLevel) {
-    params.set("risk_level", query.riskLevel);
+    params.set(
+      "risk_level",
+      query.riskLevel,
+    );
   }
 
   if (query.outcome) {
@@ -122,12 +155,25 @@ export async function getPaginatedAppointments(
   }
 
   if (query.search?.trim()) {
-    params.set("search", query.search.trim());
+    params.set(
+      "search",
+      query.search.trim(),
+    );
   }
 
-  if (query.sortBy && query.sortDirection) {
-    params.set("sort_by", query.sortBy);
-    params.set("sort_direction", query.sortDirection);
+  if (
+    query.sortBy &&
+    query.sortDirection
+  ) {
+    params.set(
+      "sort_by",
+      query.sortBy,
+    );
+
+    params.set(
+      "sort_direction",
+      query.sortDirection,
+    );
   }
 
   const response = await fetch(
@@ -143,11 +189,43 @@ export async function getPaginatedAppointments(
   return response.json();
 }
 
-export async function getAppointmentReferenceData(): Promise<AppointmentReferenceData> {
-  const response = await fetch(`${API_BASE_URL}/api/appointments/reference-data/options`);
+/* ----------------------------------------------------- */
+/* Appointment details                                   */
+/* ----------------------------------------------------- */
+
+export async function getAppointmentDetails(
+  appointmentId: string,
+): Promise<AppointmentDetailsResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/appointments/${encodeURIComponent(
+      appointmentId,
+    )}/details`,
+  );
+
   if (!response.ok) {
-    throw new Error(`Unable to load appointment options: ${response.status}`);
+    throw new Error(
+      `Unable to load appointment details: ${response.status}`,
+    );
   }
+
+  return response.json();
+}
+
+/* ----------------------------------------------------- */
+/* Reference data                                        */
+/* ----------------------------------------------------- */
+
+export async function getAppointmentReferenceData(): Promise<AppointmentReferenceData> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/appointments/reference-data/options`,
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `Unable to load appointment options: ${response.status}`,
+    );
+  }
+
   return response.json();
 }
 
@@ -164,57 +242,135 @@ export async function getAppointmentFilterOptions(
   signal?: AbortSignal,
 ): Promise<AppointmentFilterReferenceData> {
   const params = new URLSearchParams();
-  if (query.facilityId) params.set("facility_id", query.facilityId);
-  if (query.customerId) params.set("customer_id", query.customerId);
-  if (query.carrierId) params.set("carrier_id", query.carrierId);
-  if (query.appointmentType) params.set("appointment_type", query.appointmentType);
-  if (query.dateFrom) params.set("date_from", query.dateFrom.split("T")[0]);
-  if (query.dateTo) params.set("date_to", query.dateTo.split("T")[0]);
+
+  if (query.facilityId) {
+    params.set(
+      "facility_id",
+      query.facilityId,
+    );
+  }
+
+  if (query.customerId) {
+    params.set(
+      "customer_id",
+      query.customerId,
+    );
+  }
+
+  if (query.carrierId) {
+    params.set(
+      "carrier_id",
+      query.carrierId,
+    );
+  }
+
+  if (query.appointmentType) {
+    params.set(
+      "appointment_type",
+      query.appointmentType,
+    );
+  }
+
+  if (query.dateFrom) {
+    params.set(
+      "date_from",
+      query.dateFrom.split("T")[0],
+    );
+  }
+
+  if (query.dateTo) {
+    params.set(
+      "date_to",
+      query.dateTo.split("T")[0],
+    );
+  }
 
   const response = await fetch(
     `${API_BASE_URL}/api/appointments/reference-data/filter-options?${params.toString()}`,
     { signal },
   );
+
   if (!response.ok) {
-    throw new Error(`Unable to load cascading filter options: ${response.status}`);
+    throw new Error(
+      `Unable to load cascading filter options: ${response.status}`,
+    );
   }
 
   const payload = await response.json();
+
   return {
     facilities: payload.facilities ?? [],
     customers: payload.customers ?? [],
     carriers: payload.carriers ?? [],
-    appointmentTypes: payload.appointment_types ?? [],
+    appointmentTypes:
+      payload.appointment_types ?? [],
   };
 }
+
+/* ----------------------------------------------------- */
+/* Create appointment                                    */
+/* ----------------------------------------------------- */
 
 export async function createAppointment(
   payload: CreateAppointmentPayload,
 ): Promise<CreateAppointmentResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/appointments`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  const response = await fetch(
+    `${API_BASE_URL}/api/appointments`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type":
+          "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+  );
 
   if (!response.ok) {
-    const rawBody = await response.text();
-    let message = `Unable to create appointment: ${response.status}`;
+    const rawBody =
+      await response.text();
+
+    let message =
+      `Unable to create appointment: ${response.status}`;
 
     if (rawBody) {
       try {
-        const body = JSON.parse(rawBody);
+        const body =
+          JSON.parse(rawBody);
 
-        if (typeof body?.message === "string") {
+        if (
+          typeof body?.message ===
+          "string"
+        ) {
           message = body.message;
-        } else if (typeof body?.detail === "string") {
+        } else if (
+          typeof body?.detail ===
+          "string"
+        ) {
           message = body.detail;
-        } else if (Array.isArray(body?.detail)) {
+        } else if (
+          Array.isArray(
+            body?.detail,
+          )
+        ) {
           message = body.detail
-            .map((item: { loc?: unknown[]; msg?: string }) => {
-              const location = item.loc?.slice(1).join(".") || "request";
-              return `${location}: ${item.msg ?? "Invalid value"}`;
-            })
+            .map(
+              (item: {
+                loc?: unknown[];
+                msg?: string;
+              }) => {
+                const location =
+                  item.loc
+                    ?.slice(1)
+                    .join(".") ||
+                  "request";
+
+                return `${location}: ${
+                  item.msg ??
+                  "Invalid value"
+                }`;
+              },
+            )
             .join("; ");
         }
       } catch {
@@ -228,59 +384,130 @@ export async function createAppointment(
   return response.json();
 }
 
+/* ----------------------------------------------------- */
+/* Update appointment                                    */
+/* ----------------------------------------------------- */
 
 export async function updateAppointment(
   appointmentId: string,
   payload: UpdateAppointmentPayload,
 ): Promise<UpdateAppointmentResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/appointments/${appointmentId}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
+  const response = await fetch(
+    `${API_BASE_URL}/api/appointments/${encodeURIComponent(
+      appointmentId,
+    )}`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type":
+          "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+  );
 
   if (!response.ok) {
-    const rawBody = await response.text();
-    let message = `Unable to update appointment: ${response.status}`;
+    const rawBody =
+      await response.text();
+
+    let message =
+      `Unable to update appointment: ${response.status}`;
+
     if (rawBody) {
       try {
-        const body = JSON.parse(rawBody);
-        message = body?.message ?? body?.detail ?? message;
+        const body =
+          JSON.parse(rawBody);
+
+        message =
+          body?.message ??
+          body?.detail ??
+          message;
       } catch {
         message = rawBody;
       }
     }
+
     throw new Error(message);
   }
+
   return response.json();
 }
 
+/* ----------------------------------------------------- */
+/* Reschedule appointment                                */
+/* ----------------------------------------------------- */
 
 export async function rescheduleAppointment(
   appointmentId: string,
   payload: RescheduleAppointmentPayload,
 ): Promise<RescheduleAppointmentResponse> {
   const response = await fetch(
-    `${API_BASE_URL}/api/appointments/${appointmentId}/reschedule`,
+    `${API_BASE_URL}/api/appointments/${encodeURIComponent(
+      appointmentId,
+    )}/reschedule`,
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type":
+          "application/json",
+      },
       body: JSON.stringify(payload),
     },
   );
 
   if (!response.ok) {
-    const rawBody = await response.text();
-    let message = `Unable to reschedule appointment: ${response.status}`;
+    const rawBody =
+      await response.text();
+
+    let message =
+      `Unable to reschedule appointment: ${response.status}`;
+
     if (rawBody) {
       try {
-        const body = JSON.parse(rawBody);
-        message = body?.message ?? body?.detail ?? message;
+        const body =
+          JSON.parse(rawBody);
+
+        message =
+          body?.message ??
+          body?.detail ??
+          message;
       } catch {
         message = rawBody;
       }
     }
+
     throw new Error(message);
+  }
+
+  return response.json();
+}
+
+/* ----------------------------------------------------- */
+/* Appointment What-If                                   */
+/* ----------------------------------------------------- */
+
+export async function runWhatIf(
+  appointmentId: string,
+  request: WhatIfRequest,
+): Promise<WhatIfResponse> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/appointments/${encodeURIComponent(
+      appointmentId,
+    )}/what-if`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type":
+          "application/json",
+      },
+      body: JSON.stringify(request),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      "Unable to run What-If analysis",
+    );
   }
 
   return response.json();

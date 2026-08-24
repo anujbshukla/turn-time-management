@@ -1,5 +1,5 @@
 import type { DashboardResponse } from "../types/dashboard";
-import type { ComparisonMode } from "../types/operationsFilters";
+import type { ComparisonMode } from "../types/appointments";
 
 interface Props {
   current: DashboardResponse;

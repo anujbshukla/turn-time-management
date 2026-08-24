@@ -2,50 +2,32 @@ export interface AppointmentListItem {
   appt_id: string;
   customer_name: string | null;
   customer_id: string | null;
-
   facility_id: string;
   facility_name: string;
-
   carrier_id: string | null;
   carrier_name: string | null;
-
   scheduled_time: string;
-
   estimated_arrival_time: string | null;
   actual_arrival_time: string | null;
-
   assigned_dock_id: string | null;
   dock_name: string | null;
-
   status: string;
-
   original_scheduled_time: string | null;
   is_rescheduled: boolean;
   reschedule_count: number;
   rescheduled_at: string | null;
-
   edit_count: number;
   last_edited_at: string | null;
-
   pallet_count: number;
   sku_count: number;
-
   priority: number;
-
   sla_minutes: number;
-
   actual_arrival_delay_minutes: number | null;
-
   predicted_duration_minutes: number | null;
-
   turn_risk_score: number | null;
-
   sla_recovery_probability: number | null;
-
   predicted_missed: boolean | null;
-
   recommended_action: string | null;
-
   estimated_savings: number | null;
 }
 
@@ -78,26 +60,21 @@ export type SortDirection = "asc" | "desc";
 export interface AppointmentQuery {
   page: number;
   pageSize: number;
-
   facilityId?: string;
   customerId?: string;
   carrierId?: string;
   dockId?: string;
   appointmentType?: "Inbound" | "Outbound";
-
   dateFrom?: string;
   dateTo?: string;
-
   palletMin?: number;
   palletMax?: number;
   skuMin?: number;
   skuMax?: number;
-
   status?: string;
   riskLevel?: string;
   outcome?: string;
   search?: string;
-
   sortBy?: AppointmentSortField;
   sortDirection?: SortDirection;
 }
@@ -108,15 +85,12 @@ export type AppointmentFilters = {
   carrierId?: string;
   dockId?: string;
   appointmentType?: "Inbound" | "Outbound";
-
   dateFrom?: string;
   dateTo?: string;
-
   palletMin?: number;
   palletMax?: number;
   skuMin?: number;
   skuMax?: number;
-
   status?: string;
   riskLevel?: string;
   outcome?: string;
@@ -215,8 +189,7 @@ export interface UpdateAppointmentPayload {
   products: CreateAppointmentProductPayload[];
 }
 
-export interface UpdateAppointmentResponse
-  extends CreateAppointmentResponse {
+export interface UpdateAppointmentResponse extends CreateAppointmentResponse {
   changed_fields: string[];
 }
 
@@ -235,9 +208,38 @@ export interface RescheduleAppointmentResponse {
   reschedule_count: number;
   rescheduled_at: string;
   prediction: Record<string, unknown> | null;
-  scoring_status:
-  | "scored"
-  | "model_unavailable"
-  | "failed";
+  scoring_status: "scored" | "model_unavailable" | "failed";
   message: string;
+}
+
+/* Consolidated from operationsFilters.ts */
+export type DatePreset =
+  | "today"
+  | "yesterday"
+  | "tomorrow"
+  | "next7"
+  | "custom";
+
+export type ComparisonMode =
+  | "none"
+  | "same-day-last-week"
+  | "week-over-week";
+
+export interface OperationsFilters {
+  facilityId?: string;
+  customerId?: string;
+  carrierId?: string;
+  appointmentType?: "Inbound" | "Outbound";
+  dateFrom: string;
+  dateTo: string;
+  datePreset: DatePreset;
+}
+
+export interface DashboardQueryFilters {
+  facilityId?: string;
+  customerId?: string;
+  carrierId?: string;
+  appointmentType?: "Inbound" | "Outbound";
+  dateFrom?: string;
+  dateTo?: string;
 }

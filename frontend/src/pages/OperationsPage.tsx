@@ -96,6 +96,10 @@ export function OperationsPage({
   ] = useState<AppointmentListItem | null>(null);
 
   const [createAppointmentOpen, setCreateAppointmentOpen] = useState(false);
+  const [
+    appointmentQueueSearch,
+    setAppointmentQueueSearch,
+  ] = useState("");
   const [kpiCardsExpanded, setKpiCardsExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<OperationsTab>("operations");
   const [aiWorkspaceExpanded, setAiWorkspaceExpanded] = useState(true);
@@ -180,6 +184,8 @@ export function OperationsPage({
     appointmentType: globalFilters.appointmentType,
     dateFrom: activeDateRange.dateFrom,
     dateTo: activeDateRange.dateTo,
+    timeFrom: globalFilters.timeFrom,
+    timeTo: globalFilters.timeTo,
   };
 
   const {
@@ -202,6 +208,8 @@ export function OperationsPage({
       appointmentType: globalFilters.appointmentType,
       dateFrom: weekComparisonRanges.current.dateFrom,
       dateTo: weekComparisonRanges.current.dateTo,
+      timeFrom: globalFilters.timeFrom,
+      timeTo: globalFilters.timeTo,
     },
     globalFilters.compareMode === "previous-week",
   );
@@ -224,6 +232,8 @@ export function OperationsPage({
       appointmentType: globalFilters.appointmentType,
       dateFrom: comparisonRange?.dateFrom,
       dateTo: comparisonRange?.dateTo,
+      timeFrom: globalFilters.timeFrom,
+      timeTo: globalFilters.timeTo,
     },
     globalFilters.compareMode !== "off",
   );
@@ -307,6 +317,31 @@ export function OperationsPage({
   }, [filterOptions, filterOptionsLoading]);
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const search =
+        appointmentQueueSearch.trim();
+
+      setAppointmentFilters((current) => {
+        const nextSearch =
+          search || undefined;
+
+        if (current.search === nextSearch) {
+          return current;
+        }
+
+        return {
+          ...current,
+          search: nextSearch,
+        };
+      });
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [appointmentQueueSearch]);
+
+  useEffect(() => {
     setIntelligenceFilters((current) => ({
       ...current,
       facilityId,
@@ -363,7 +398,10 @@ export function OperationsPage({
       appointmentType: globalFilters.appointmentType,
       dateFrom: activeDateRange.dateFrom,
       dateTo: activeDateRange.dateTo,
+      timeFrom: globalFilters.timeFrom,
+      timeTo: globalFilters.timeTo,
     }));
+
     resetDashboardSimulation();
   }, [
     facilityId,
@@ -373,6 +411,8 @@ export function OperationsPage({
     globalFilters.datePreset,
     globalFilters.customDate,
     globalFilters.customDateEnd,
+    globalFilters.timeFrom,
+    globalFilters.timeTo,
   ]);
 
   const displayedDashboard =
@@ -440,6 +480,8 @@ export function OperationsPage({
   }
 
   function clearAppointmentFilters() {
+    setAppointmentQueueSearch("");
+
     setAppointmentFilters({
       facilityId,
       customerId: globalFilters.customerId,
@@ -447,6 +489,8 @@ export function OperationsPage({
       appointmentType: globalFilters.appointmentType,
       dateFrom: activeDateRange.dateFrom,
       dateTo: activeDateRange.dateTo,
+      timeFrom: globalFilters.timeFrom,
+      timeTo: globalFilters.timeTo,
     });
   }
 
@@ -768,15 +812,23 @@ export function OperationsPage({
                 pageSize={pageSize}
                 sortBy={sortBy}
                 sortDirection={sortDirection}
+                searchValue={appointmentQueueSearch}
                 loading={loading}
                 error={error}
                 onPreviousPage={goToPreviousPage}
                 onNextPage={goToNextPage}
                 onPageSizeChange={changePageSize}
                 onSortChange={changeSort}
-                onCreateAppointment={() => setCreateAppointmentOpen(true)}
-                onAppointmentSelect={setSelectedAppointment}
-                selectedAppointmentId={selectedAppointment?.appt_id}
+                onSearchChange={setAppointmentQueueSearch}
+                onCreateAppointment={() =>
+                  setCreateAppointmentOpen(true)
+                }
+                onAppointmentSelect={
+                  setSelectedAppointment
+                }
+                selectedAppointmentId={
+                  selectedAppointment?.appt_id
+                }
               />
             </section>
           </div>

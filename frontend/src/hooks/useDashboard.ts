@@ -4,7 +4,10 @@ import { getDashboard } from "../services/dashboard";
 import type { DashboardFilters } from "../services/dashboard";
 import type { DashboardResponse } from "../types/dashboard";
 
-export function useDashboard(filters: DashboardFilters = {}, enabled = true) {
+export function useDashboard(
+  filters: DashboardFilters = {},
+  enabled = true,
+) {
   const [dashboard, setDashboard] =
     useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -21,6 +24,8 @@ export function useDashboard(filters: DashboardFilters = {}, enabled = true) {
       filters.appointmentType,
       filters.dateFrom,
       filters.dateTo,
+      filters.timeFrom,
+      filters.timeTo,
     ],
   );
 
@@ -65,7 +70,9 @@ export function useDashboard(filters: DashboardFilters = {}, enabled = true) {
   }, [filterKey, refreshKey, enabled]);
 
   function refresh() {
-    setRefreshKey((currentRefreshKey) => currentRefreshKey + 1);
+    setRefreshKey(
+      (currentRefreshKey) => currentRefreshKey + 1,
+    );
   }
 
   return { dashboard, loading, error, refresh };

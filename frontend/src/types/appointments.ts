@@ -53,6 +53,7 @@ export type AppointmentSortField =
   | "scheduled_time"
   | "estimated_arrival_time"
   | "status"
+  | "change_status"
   | "turn_risk_score";
 
 export type SortDirection = "asc" | "desc";
@@ -67,6 +68,8 @@ export interface AppointmentQuery {
   appointmentType?: "Inbound" | "Outbound";
   dateFrom?: string;
   dateTo?: string;
+  timeFrom?: string;
+  timeTo?: string;
   palletMin?: number;
   palletMax?: number;
   skuMin?: number;
@@ -87,6 +90,8 @@ export type AppointmentFilters = {
   appointmentType?: "Inbound" | "Outbound";
   dateFrom?: string;
   dateTo?: string;
+  timeFrom?: string;
+  timeTo?: string;
   palletMin?: number;
   palletMax?: number;
   skuMin?: number;

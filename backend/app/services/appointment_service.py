@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -155,6 +155,8 @@ class AppointmentService:
         appointment_type: str | None,
         date_from: date | None,
         date_to: date | None,
+        time_from: time | None,
+        time_to: time | None,
         pallet_min: int | None,
         pallet_max: int | None,
         sku_min: int | None,
@@ -176,6 +178,8 @@ class AppointmentService:
             appointment_type=appointment_type,
             date_from=date_from,
             date_to=date_to,
+            time_from=time_from,
+            time_to=time_to,
             pallet_min=pallet_min,
             pallet_max=pallet_max,
             sku_min=sku_min,

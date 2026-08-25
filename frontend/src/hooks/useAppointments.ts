@@ -65,6 +65,8 @@ export function useAppointments(
     filters.appointmentType,
     filters.dateFrom,
     filters.dateTo,
+    filters.timeFrom,
+    filters.timeTo,
     filters.palletMin,
     filters.palletMax,
     filters.skuMin,
@@ -108,6 +110,12 @@ export function useAppointments(
 
             dateTo:
               filters.dateTo,
+
+            timeFrom:
+              filters.timeFrom,
+
+            timeTo:
+              filters.timeTo,
 
             palletMin:
               filters.palletMin,
@@ -176,6 +184,8 @@ export function useAppointments(
     filters.appointmentType,
     filters.dateFrom,
     filters.dateTo,
+    filters.timeFrom,
+    filters.timeTo,
     filters.palletMin,
     filters.palletMax,
     filters.skuMin,

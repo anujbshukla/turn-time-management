@@ -11,6 +11,7 @@ type AppointmentTableProps = {
   pageSize: number;
   sortBy?: AppointmentSortField;
   sortDirection?: SortDirection;
+  searchValue: string;
   loading: boolean;
   error: string | null;
 
@@ -18,6 +19,7 @@ type AppointmentTableProps = {
   onNextPage: () => void;
   onPageSizeChange: (pageSize: number) => void;
   onSortChange: (field: AppointmentSortField) => void;
+  onSearchChange: (value: string) => void;
   onCreateAppointment: () => void;
 
   onAppointmentSelect: (
@@ -45,6 +47,7 @@ function SortableHeader({
   onSortChange,
 }: SortableHeaderProps) {
   const isActive = activeField === field;
+
   const ariaSort = !isActive
     ? "none"
     : direction === "asc"
@@ -71,6 +74,7 @@ function SortableHeader({
         onClick={() => onSortChange(field)}
       >
         <span>{label}</span>
+
         <span
           className="appointment-sort-indicator"
           aria-hidden="true"
@@ -92,12 +96,14 @@ export function AppointmentTable({
   pageSize,
   sortBy,
   sortDirection,
+  searchValue,
   loading,
   error,
   onPreviousPage,
   onNextPage,
   onPageSizeChange,
   onSortChange,
+  onSearchChange,
   onCreateAppointment,
   onAppointmentSelect,
   selectedAppointmentId,
@@ -119,8 +125,10 @@ export function AppointmentTable({
       <div className="panel-header appointment-panel-header">
         <div>
           <h2>Live Appointment Queue</h2>
+
           <p>
-            Click a column heading to sort the full queue
+            Search the full queue or click a column heading
+            to sort
           </p>
         </div>
 
@@ -128,9 +136,47 @@ export function AppointmentTable({
           <span className="appointment-total">
             {pagination.total_items} total
           </span>
-          <button type="button" className="primary-button appointment-create-button" onClick={onCreateAppointment}>
+
+          <button
+            type="button"
+            className="primary-button appointment-create-button"
+            onClick={onCreateAppointment}
+          >
             + Create appointment
           </button>
+        </div>
+      </div>
+
+      <div className="appointment-queue-search-row">
+        <div className="appointment-queue-search">
+          <span
+            className="appointment-queue-search-icon"
+            aria-hidden="true"
+          >
+            ⌕
+          </span>
+
+          <input
+            type="search"
+            value={searchValue}
+            placeholder="Search appointment, customer, facility, carrier, date/time, status, change status, or risk..."
+            aria-label="Search appointment queue"
+            onChange={(event) =>
+              onSearchChange(event.target.value)
+            }
+          />
+
+          {searchValue && (
+            <button
+              type="button"
+              className="appointment-queue-search-clear"
+              onClick={() => onSearchChange("")}
+              aria-label="Clear appointment search"
+              title="Clear search"
+            >
+              ×
+            </button>
+          )}
         </div>
       </div>
 
@@ -158,6 +204,7 @@ export function AppointmentTable({
                     disabled={loading}
                     onSortChange={onSortChange}
                   />
+
                   <SortableHeader
                     field="customer_name"
                     label="Customer"
@@ -166,6 +213,7 @@ export function AppointmentTable({
                     disabled={loading}
                     onSortChange={onSortChange}
                   />
+
                   <SortableHeader
                     field="facility_name"
                     label="Facility"
@@ -174,6 +222,7 @@ export function AppointmentTable({
                     disabled={loading}
                     onSortChange={onSortChange}
                   />
+
                   <SortableHeader
                     field="carrier_name"
                     label="Carrier"
@@ -182,6 +231,7 @@ export function AppointmentTable({
                     disabled={loading}
                     onSortChange={onSortChange}
                   />
+
                   <SortableHeader
                     field="scheduled_time"
                     label="Scheduled"
@@ -190,6 +240,7 @@ export function AppointmentTable({
                     disabled={loading}
                     onSortChange={onSortChange}
                   />
+
                   <SortableHeader
                     field="estimated_arrival_time"
                     label="Expected Arrival"
@@ -198,6 +249,7 @@ export function AppointmentTable({
                     disabled={loading}
                     onSortChange={onSortChange}
                   />
+
                   <SortableHeader
                     field="status"
                     label="Status"
@@ -206,7 +258,16 @@ export function AppointmentTable({
                     disabled={loading}
                     onSortChange={onSortChange}
                   />
-                  <th>Change status</th>
+
+                  <SortableHeader
+                    field="change_status"
+                    label="Change Status"
+                    activeField={sortBy}
+                    direction={sortDirection}
+                    disabled={loading}
+                    onSortChange={onSortChange}
+                  />
+
                   <SortableHeader
                     field="turn_risk_score"
                     label="Risk"
@@ -241,6 +302,23 @@ export function AppointmentTable({
                     selectedAppointmentId ===
                     appointment.appt_id;
 
+                  const changeStatus =
+                    appointment.is_rescheduled &&
+                      appointment.edit_count > 0
+                      ? "Rescheduled · Edited"
+                      : appointment.is_rescheduled
+                        ? "Rescheduled"
+                        : appointment.edit_count > 0
+                          ? "Edited"
+                          : "Original";
+
+                  const changeStatusClass =
+                    appointment.is_rescheduled
+                      ? "rescheduled"
+                      : appointment.edit_count > 0
+                        ? "edited"
+                        : "original";
+
                   return (
                     <tr
                       key={appointment.appt_id}
@@ -262,6 +340,7 @@ export function AppointmentTable({
                           event.key === " "
                         ) {
                           event.preventDefault();
+
                           onAppointmentSelect(
                             appointment,
                           );
@@ -271,13 +350,21 @@ export function AppointmentTable({
                       <td className="appointment-id">
                         {appointment.appt_id}
                       </td>
+
                       <td>
-                        {appointment.customer_name ?? "—"}
+                        {appointment.customer_name ??
+                          "—"}
                       </td>
-                      <td>{appointment.facility_name}</td>
+
                       <td>
-                        {appointment.carrier_name ?? "—"}
+                        {appointment.facility_name}
                       </td>
+
+                      <td>
+                        {appointment.carrier_name ??
+                          "—"}
+                      </td>
+
                       <td>
                         {new Date(
                           appointment.scheduled_time,
@@ -288,6 +375,7 @@ export function AppointmentTable({
                           minute: "2-digit",
                         })}
                       </td>
+
                       <td>
                         {appointment.estimated_arrival_time
                           ? new Date(
@@ -300,6 +388,7 @@ export function AppointmentTable({
                           })
                           : "—"}
                       </td>
+
                       <td>
                         <span
                           className={`status-badge status-${statusClass}`}
@@ -307,30 +396,21 @@ export function AppointmentTable({
                           {appointment.status}
                         </span>
                       </td>
+
                       <td>
                         <span
-                          className={`appointment-change-badge ${
-                            appointment.is_rescheduled
-                              ? "rescheduled"
-                              : appointment.edit_count > 0
-                                ? "edited"
-                                : "original"
-                          }`}
+                          className={`appointment-change-badge ${changeStatusClass}`}
                         >
-                          {appointment.is_rescheduled && appointment.edit_count > 0
-                            ? "Rescheduled · Edited"
-                            : appointment.is_rescheduled
-                              ? "Rescheduled"
-                              : appointment.edit_count > 0
-                                ? "Edited"
-                                : "Original"}
+                          {changeStatus}
                         </span>
                       </td>
+
                       <td>
                         <span
                           className={`risk-badge ${riskClass}`}
                         >
-                          {appointment.turn_risk_score ?? "—"}
+                          {appointment.turn_risk_score ??
+                            "—"}
                         </span>
                       </td>
                     </tr>
@@ -343,7 +423,9 @@ export function AppointmentTable({
                       colSpan={9}
                       className="empty-table-cell"
                     >
-                      No appointments found.
+                      {searchValue
+                        ? `No appointments match "${searchValue}".`
+                        : "No appointments found."}
                     </td>
                   </tr>
                 )}
@@ -362,7 +444,8 @@ export function AppointmentTable({
               <button
                 type="button"
                 disabled={
-                  !pagination.has_previous || loading
+                  !pagination.has_previous ||
+                  loading
                 }
                 onClick={onPreviousPage}
               >
@@ -377,7 +460,8 @@ export function AppointmentTable({
               <button
                 type="button"
                 disabled={
-                  !pagination.has_next || loading
+                  !pagination.has_next ||
+                  loading
                 }
                 onClick={onNextPage}
               >
@@ -386,17 +470,23 @@ export function AppointmentTable({
 
               <label className="page-size-control">
                 <span>Rows per page</span>
+
                 <select
                   value={pageSize}
                   onChange={(event) =>
                     onPageSizeChange(
-                      Number(event.target.value),
+                      Number(
+                        event.target.value,
+                      ),
                     )
                   }
                 >
                   {[10, 20, 30, 40, 50].map(
                     (size) => (
-                      <option key={size} value={size}>
+                      <option
+                        key={size}
+                        value={size}
+                      >
                         {size}
                       </option>
                     ),

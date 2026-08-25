@@ -21,6 +21,8 @@ export interface OperationsGlobalFilters {
   datePreset: DatePreset;
   customDate?: string;
   customDateEnd?: string;
+  timeFrom?: string;
+  timeTo?: string;
   compareMode: CompareMode;
 }
 
@@ -74,6 +76,11 @@ export function OperationsFilterBar({
       ? filters.customDateEnd ?? pickerStart
       : toLocalDate(activePickerEnd);
 
+  const pickerTimeFrom =
+    filters.timeFrom ?? "00:00";
+
+  const pickerTimeTo =
+    filters.timeTo ?? "23:59";
   return (
     <section className="operations-filter-shell compact-filter-shell" aria-label="Dashboard filters">
       <div className="operations-filter-row">
@@ -129,6 +136,63 @@ export function OperationsFilterBar({
                     datePreset: "custom",
                     customDate: pickerStart,
                     customDateEnd: event.target.value,
+                  })
+                }
+              />
+            </label>
+          </div>
+        </div>
+
+        <div
+          className="custom-time-range-control"
+          aria-label="Operating time range"
+        >
+          <div className="custom-time-range-track">
+            <label>
+              <span>From</span>
+
+              <input
+                type="time"
+                value={pickerTimeFrom}
+                max={pickerTimeTo}
+                onChange={(event) => {
+                  const nextStart =
+                    event.target.value;
+
+                  const nextEnd =
+                    pickerTimeTo &&
+                      pickerTimeTo < nextStart
+                      ? nextStart
+                      : pickerTimeTo;
+
+                  onChange({
+                    ...filters,
+                    timeFrom: nextStart,
+                    timeTo: nextEnd,
+                  });
+                }}
+              />
+            </label>
+
+            <span
+              className="custom-time-range-arrow"
+              aria-hidden="true"
+            >
+              →
+            </span>
+
+            <label>
+              <span>To</span>
+
+              <input
+                type="time"
+                value={pickerTimeTo}
+                min={pickerTimeFrom}
+                onChange={(event) =>
+                  onChange({
+                    ...filters,
+                    timeFrom: pickerTimeFrom,
+                    timeTo: event.target.value,
                   })
                 }
               />
@@ -213,6 +277,8 @@ export function OperationsFilterBar({
           onClick={() =>
             onChange({
               datePreset: "today",
+              timeFrom: undefined,
+              timeTo: undefined,
               compareMode: "off",
               appointmentType: undefined,
             })

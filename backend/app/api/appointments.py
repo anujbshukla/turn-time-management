@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, time
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
@@ -90,6 +90,12 @@ def get_paginated_appointments(
     date_to: date | None = Query(
         default=None,
     ),
+    time_from: time | None = Query(
+        default=None,
+    ),
+    time_to: time | None = Query(
+        default=None,
+    ),
     pallet_min: int | None = Query(
         default=None,
         ge=0,
@@ -150,6 +156,8 @@ def get_paginated_appointments(
         appointment_type=appointment_type,
         date_from=date_from,
         date_to=date_to,
+        time_from=time_from,
+        time_to=time_to,
         pallet_min=pallet_min,
         pallet_max=pallet_max,
         sku_min=sku_min,

@@ -101,6 +101,8 @@ class DashboardService:
         appointment_type: str | None = None,
         date_from=None,
         date_to=None,
+        time_from=None,
+        time_to=None,
     ) -> dict[str, Any]:
         dashboard = {
             "summary": self.repository.get_summary(
@@ -213,6 +215,8 @@ class DashboardService:
                 appointment_type=appointment_type,
                 date_from=date_from,
                 date_to=date_to,
+                time_from=time_from,
+                time_to=time_to,
             )
         )
         normalized_dashboard["operations_feed"] = normalize_value(

@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
@@ -35,6 +35,8 @@ def _filters(
     appointment_type: str | None,
     date_from: date | None,
     date_to: date | None,
+    time_from: time | None = None,
+    time_to: time | None = None,
 ) -> DashboardFilterScope:
     return DashboardFilterScope(
         facility_id=facility_id,
@@ -43,6 +45,8 @@ def _filters(
         appointment_type=appointment_type,
         date_from=date_from,
         date_to=date_to,
+        time_from=time_from,
+        time_to=time_to,
     )
 
 
@@ -57,6 +61,8 @@ def get_dashboard(
     ),
     date_from: date | None = Query(default=None),
     date_to: date | None = Query(default=None),
+    time_from: time | None = Query(default=None),
+    time_to: time | None = Query(default=None),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     DemoAppointmentLifecycleService(db).reconcile()
@@ -71,11 +77,11 @@ def get_dashboard(
         appointment_type,
         date_from,
         date_to,
+        time_from,
+        time_to,
     )
 
     with scoped_appointments(db, filters):
-        # The temporary table applies customer/carrier/type/date scope.
-        # Keep facility_id for facility-aware components such as dock heatmaps.
         return service.get_dashboard(
             facility_id,
             customer_id=customer_id,
@@ -83,6 +89,8 @@ def get_dashboard(
             appointment_type=appointment_type,
             date_from=date_from,
             date_to=date_to,
+            time_from=time_from,
+            time_to=time_to,
         )
 
 
@@ -101,15 +109,19 @@ def get_dashboard_intelligence_filter_options(
 ) -> dict[str, Any]:
     repository = DashboardRepository(db)
     service = DashboardService(repository)
+
     return service.get_intelligence_filter_reference_data(
         facility_id=facility_id,
         customer_id=customer_id,
         carrier_id=carrier_id,
         appointment_type=appointment_type,
         date_from=date_from,
-        date_to=date_to + timedelta(days=1) if date_to else None,
+        date_to=(
+            date_to + timedelta(days=1)
+            if date_to
+            else None
+        ),
     )
-
 
 
 @router.get("/intelligence")
@@ -123,9 +135,10 @@ def get_dashboard_intelligence(
     ),
     date_from: date | None = Query(default=None),
     date_to: date | None = Query(default=None),
+    time_from: time | None = Query(default=None),
+    time_to: time | None = Query(default=None),
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
-    """Independent Root Cause / Recovery analysis filters."""
     repository = DashboardRepository(db)
     service = DashboardService(repository)
 
@@ -135,7 +148,13 @@ def get_dashboard_intelligence(
         carrier_id,
         appointment_type,
         date_from,
-        date_to + timedelta(days=1) if date_to else None,
+        (
+            date_to + timedelta(days=1)
+            if date_to
+            else None
+        ),
+        time_from,
+        time_to,
     )
 
     with scoped_appointments(db, filters):

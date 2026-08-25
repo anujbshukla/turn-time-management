@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, time, timedelta
 from typing import Any
 
 from sqlalchemy import text
@@ -71,6 +71,8 @@ class KpiIntelligenceService:
         appointment_type: str | None = None,
         date_from: date | None = None,
         date_to: date | None = None,
+        time_from: time | None = None,
+        time_to: time | None = None,
     ) -> list[dict[str, Any]]:
         # date_to is exclusive throughout the dashboard API.
         selected_start = date_from or date.today()
@@ -100,6 +102,8 @@ class KpiIntelligenceService:
             customer_id=customer_id,
             carrier_id=carrier_id,
             appointment_type=appointment_type,
+            time_from=time_from,
+            time_to=time_to,
         )
         by_date = {row["operation_date"]: row for row in rows}
 
@@ -214,6 +218,8 @@ class KpiIntelligenceService:
         customer_id: str | None,
         carrier_id: str | None,
         appointment_type: str | None,
+        time_from: time | None,
+        time_to: time | None,
     ) -> list[dict[str, Any]]:
         sla_met = completed_sla_met_sql("appointment")
         sla_missed = completed_sla_missed_sql("appointment")
@@ -261,6 +267,16 @@ class KpiIntelligenceService:
                       OR LOWER(appointment.appointment_type) =
                          LOWER(CAST(:appointment_type AS VARCHAR))
                   )
+                  AND (
+                      CAST(:time_from AS VARCHAR) IS NULL
+                      OR TO_CHAR(appointment.scheduled_time, 'HH24:MI')
+                         >= CAST(:time_from AS VARCHAR)
+                  )
+                  AND (
+                      CAST(:time_to AS VARCHAR) IS NULL
+                      OR TO_CHAR(appointment.scheduled_time, 'HH24:MI')
+                         <= CAST(:time_to AS VARCHAR)
+                  )
                 GROUP BY DATE(appointment.scheduled_time)
                 ORDER BY operation_date;
                 """.format(
@@ -276,6 +292,12 @@ class KpiIntelligenceService:
                 "customer_id": customer_id,
                 "carrier_id": carrier_id,
                 "appointment_type": appointment_type,
+                "time_from": (
+                    time_from.strftime("%H:%M") if time_from else None
+                ),
+                "time_to": (
+                    time_to.strftime("%H:%M") if time_to else None
+                ),
             },
         ).mappings().all()
 

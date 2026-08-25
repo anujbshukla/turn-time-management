@@ -17,6 +17,8 @@ class DashboardFilterScope:
     appointment_type: str | None = None
     date_from: date | None = None
     date_to: date | None = None
+    time_from: time | None = None
+    time_to: time | None = None
 
     @property
     def start_datetime(self) -> datetime | None:
@@ -28,8 +30,6 @@ class DashboardFilterScope:
 
     @property
     def end_datetime(self) -> datetime | None:
-        # date_to is an exclusive boundary. The frontend sends:
-        # Today => date_from=today, date_to=tomorrow.
         return (
             datetime.combine(self.date_to, time.min)
             if self.date_to
@@ -42,13 +42,6 @@ def scoped_appointments(
     db: Session,
     filters: DashboardFilterScope,
 ) -> Iterator[None]:
-    """Create a request-local filtered appointments table.
-
-    A temporary table safely shadows public.appointments for the dashboard
-    repository and all downstream dashboard services. PostgreSQL does not
-    support bind parameters inside CREATE VIEW definitions, so the table is
-    created first and populated with a normal parameterized INSERT ... SELECT.
-    """
     db.execute(text("DROP VIEW IF EXISTS pg_temp.appointments;"))
     db.execute(text("DROP TABLE IF EXISTS pg_temp.appointments;"))
 
@@ -92,7 +85,30 @@ def scoped_appointments(
         conditions.append("source.scheduled_time < :date_to")
         parameters["date_to"] = filters.end_datetime
 
+    if filters.time_from is not None:
+        conditions.append(
+            """
+            TO_CHAR(
+                source.scheduled_time,
+                'HH24:MI'
+            ) >= :time_from
+            """
+        )
+        parameters["time_from"] = filters.time_from.strftime("%H:%M")
+
+    if filters.time_to is not None:
+        conditions.append(
+            """
+            TO_CHAR(
+                source.scheduled_time,
+                'HH24:MI'
+            ) <= :time_to
+            """
+        )
+        parameters["time_to"] = filters.time_to.strftime("%H:%M")
+
     where_clause = "\n              AND ".join(conditions)
+
     db.execute(
         text(
             f"""

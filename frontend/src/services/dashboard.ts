@@ -14,13 +14,14 @@ export interface DashboardFilters {
   appointmentType?: "Inbound" | "Outbound";
   dateFrom?: string;
   dateTo?: string;
+  timeFrom?: string;
+  timeTo?: string;
 }
 
 export interface DashboardIntelligenceResponse {
   delay_sla_reasons: DelaySlaReasonItem[];
   recovery_plan_performance: RecoveryPlanPerformanceItem[];
 }
-
 
 export async function getDashboardIntelligenceFilterOptions(
   filters: DashboardFilters = {},
@@ -53,11 +54,15 @@ function buildDashboardParams(filters: DashboardFilters = {}) {
   if (filters.facilityId) params.set("facility_id", filters.facilityId);
   if (filters.customerId) params.set("customer_id", filters.customerId);
   if (filters.carrierId) params.set("carrier_id", filters.carrierId);
+
   if (filters.appointmentType) {
     params.set("appointment_type", filters.appointmentType);
   }
+
   if (filters.dateFrom) params.set("date_from", filters.dateFrom);
   if (filters.dateTo) params.set("date_to", filters.dateTo);
+  if (filters.timeFrom) params.set("time_from", filters.timeFrom);
+  if (filters.timeTo) params.set("time_to", filters.timeTo);
 
   return params;
 }
@@ -113,7 +118,10 @@ export async function runDashboardWhatIf(
   if (!response.ok) {
     let message = "Unable to run dashboard What-If simulation";
     try {
-      const payload = await response.json() as { message?: string; detail?: string };
+      const payload = await response.json() as {
+        message?: string;
+        detail?: string;
+      };
       message = payload.message ?? payload.detail ?? message;
     } catch {
       // Preserve fallback.
@@ -138,10 +146,14 @@ export async function askGlobalCopilot(
 
   if (!response.ok) {
     let message = "Unable to ask the Global AI Warehouse Copilot";
+
     try {
       const payload = await response.json() as {
         message?: string;
-        detail?: string | Array<{ loc?: Array<string | number>; msg?: string }>;
+        detail?: string | Array<{
+          loc?: Array<string | number>;
+          msg?: string;
+        }>;
       };
 
       if (typeof payload.detail === "string") {
@@ -161,6 +173,7 @@ export async function askGlobalCopilot(
     } catch {
       // Keep fallback.
     }
+
     throw new Error(message);
   }
 

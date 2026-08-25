@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timezone
 from typing import Any
 
 from sqlalchemy import func, select, text
@@ -32,6 +32,8 @@ class AppointmentRepository(AppointmentWriteRepositoryMixin):
         appointment_type: str | None = None,
         date_from: date | None = None,
         date_to: date | None = None,
+        time_from: time | None = None,
+        time_to: time | None = None,
         pallet_min: int | None = None,
         pallet_max: int | None = None,
         sku_min: int | None = None,
@@ -63,6 +65,15 @@ class AppointmentRepository(AppointmentWriteRepositoryMixin):
                 "WHEN 'In Progress' THEN 6 "
                 "WHEN 'Completed' THEN 7 "
                 "ELSE 99 END"
+            ),
+            "change_status": (
+                "CASE "
+                "WHEN a.is_rescheduled = TRUE "
+                "     AND COALESCE(a.edit_count, 0) > 0 THEN 4 "
+                "WHEN a.is_rescheduled = TRUE THEN 3 "
+                "WHEN COALESCE(a.edit_count, 0) > 0 THEN 2 "
+                "ELSE 1 "
+                "END"
             ),
             "turn_risk_score": "p.turn_risk_score",
         }
@@ -111,6 +122,16 @@ class AppointmentRepository(AppointmentWriteRepositoryMixin):
             "appointment_type": appointment_type,
             "date_from": date_from,
             "date_to": date_to,
+            "time_from": (
+                time_from.strftime("%H:%M")
+                if time_from
+                else None
+            ),
+            "time_to": (
+                time_to.strftime("%H:%M")
+                if time_to
+                else None
+            ),
             "pallet_min": pallet_min,
             "pallet_max": pallet_max,
             "sku_min": sku_min,
@@ -230,35 +251,101 @@ class AppointmentRepository(AppointmentWriteRepositoryMixin):
                       OR a.scheduled_time < CAST(:date_to AS DATE)
                   )
                   AND (
-      CAST(:pallet_min AS INTEGER) IS NULL
-      OR a.pallet_count >= CAST(:pallet_min AS INTEGER)
-)
+                    CAST(:time_from AS VARCHAR) IS NULL
+                    OR TO_CHAR(
+                        a.scheduled_time,
+                        'HH24:MI'
+                    ) >= CAST(:time_from AS VARCHAR)
+                )
 
-AND (
-      CAST(:pallet_max AS INTEGER) IS NULL
-      OR a.pallet_count <= CAST(:pallet_max AS INTEGER)
-)
+                AND (
+                    CAST(:time_to AS VARCHAR) IS NULL
+                    OR TO_CHAR(
+                        a.scheduled_time,
+                        'HH24:MI'
+                    ) <= CAST(:time_to AS VARCHAR)
+                )
+                  AND (
+                    CAST(:pallet_min AS INTEGER) IS NULL
+                    OR a.pallet_count >= CAST(:pallet_min AS INTEGER)
+                )
 
-AND (
-      CAST(:sku_min AS INTEGER) IS NULL
-      OR a.sku_count >= CAST(:sku_min AS INTEGER)
-)
+                AND (
+                    CAST(:pallet_max AS INTEGER) IS NULL
+                    OR a.pallet_count <= CAST(:pallet_max AS INTEGER)
+                )
 
-AND (
-      CAST(:sku_max AS INTEGER) IS NULL
-      OR a.sku_count <= CAST(:sku_max AS INTEGER)
-)
+                AND (
+                    CAST(:sku_min AS INTEGER) IS NULL
+                    OR a.sku_count >= CAST(:sku_min AS INTEGER)
+                )
+
+                AND (
+                    CAST(:sku_max AS INTEGER) IS NULL
+                    OR a.sku_count <= CAST(:sku_max AS INTEGER)
+                )
                   AND (
                       CAST(:status AS VARCHAR) IS NULL
                       OR a.status = CAST(:status AS VARCHAR)
                   )
 
                   AND (
-                      CAST(:search AS VARCHAR) IS NULL
-                      OR a.appt_id ILIKE CAST(:search AS VARCHAR)
-                      OR a.customer_name ILIKE CAST(:search AS VARCHAR)
-                      OR c.carrier_name ILIKE CAST(:search AS VARCHAR)
-                  )
+    CAST(:search AS VARCHAR) IS NULL
+
+    OR a.appt_id
+        ILIKE CAST(:search AS VARCHAR)
+
+    OR COALESCE(a.customer_name, '')
+        ILIKE CAST(:search AS VARCHAR)
+
+    OR COALESCE(f.facility_name, '')
+        ILIKE CAST(:search AS VARCHAR)
+
+    OR COALESCE(c.carrier_name, '')
+        ILIKE CAST(:search AS VARCHAR)
+
+    OR COALESCE(a.status, '')
+        ILIKE CAST(:search AS VARCHAR)
+
+    OR TO_CHAR(
+        a.scheduled_time,
+        'Mon DD, HH12:MI AM'
+    ) ILIKE CAST(:search AS VARCHAR)
+
+    OR CAST(a.scheduled_time AS VARCHAR)
+        ILIKE CAST(:search AS VARCHAR)
+
+    OR TO_CHAR(
+        a.estimated_arrival_time,
+        'Mon DD, HH12:MI AM'
+    ) ILIKE CAST(:search AS VARCHAR)
+
+    OR CAST(
+        a.estimated_arrival_time
+        AS VARCHAR
+    ) ILIKE CAST(:search AS VARCHAR)
+
+    OR (
+        CASE
+            WHEN a.is_rescheduled = TRUE
+                 AND COALESCE(a.edit_count, 0) > 0
+                THEN 'Rescheduled Edited'
+
+            WHEN a.is_rescheduled = TRUE
+                THEN 'Rescheduled'
+
+            WHEN COALESCE(a.edit_count, 0) > 0
+                THEN 'Edited'
+
+            ELSE 'Original'
+        END
+    ) ILIKE CAST(:search AS VARCHAR)
+
+    OR CAST(
+        p.turn_risk_score
+        AS VARCHAR
+    ) ILIKE CAST(:search AS VARCHAR)
+)
 
                   AND (
                       CAST(:risk_level AS VARCHAR) IS NULL
@@ -307,7 +394,8 @@ AND (
                 SELECT COUNT(*)
 
                 FROM appointments a
-
+                JOIN facilities f
+    ON f.facility_id = a.facility_id
                 LEFT JOIN carriers c
                     ON c.carrier_id = a.carrier_id
 
@@ -355,36 +443,102 @@ AND (
                       CAST(:date_to AS DATE) IS NULL
                       OR a.scheduled_time < CAST(:date_to AS DATE)
                   )
-AND (
-      CAST(:pallet_min AS INTEGER) IS NULL
-      OR a.pallet_count >= CAST(:pallet_min AS INTEGER)
-)
+                  AND (
+                        CAST(:time_from AS VARCHAR) IS NULL
+                        OR TO_CHAR(
+                            a.scheduled_time,
+                            'HH24:MI'
+                        ) >= CAST(:time_from AS VARCHAR)
+                    )
 
-AND (
-      CAST(:pallet_max AS INTEGER) IS NULL
-      OR a.pallet_count <= CAST(:pallet_max AS INTEGER)
-)
+                    AND (
+                        CAST(:time_to AS VARCHAR) IS NULL
+                        OR TO_CHAR(
+                            a.scheduled_time,
+                            'HH24:MI'
+                        ) <= CAST(:time_to AS VARCHAR)
+                    )
+                    AND (
+                        CAST(:pallet_min AS INTEGER) IS NULL
+                        OR a.pallet_count >= CAST(:pallet_min AS INTEGER)
+                    )
 
-AND (
-      CAST(:sku_min AS INTEGER) IS NULL
-      OR a.sku_count >= CAST(:sku_min AS INTEGER)
-)
+                    AND (
+                        CAST(:pallet_max AS INTEGER) IS NULL
+                        OR a.pallet_count <= CAST(:pallet_max AS INTEGER)
+                    )
 
-AND (
-      CAST(:sku_max AS INTEGER) IS NULL
-      OR a.sku_count <= CAST(:sku_max AS INTEGER)
-)
+                    AND (
+                        CAST(:sku_min AS INTEGER) IS NULL
+                        OR a.sku_count >= CAST(:sku_min AS INTEGER)
+                    )
+
+                    AND (
+                        CAST(:sku_max AS INTEGER) IS NULL
+                        OR a.sku_count <= CAST(:sku_max AS INTEGER)
+                    )
                   AND (
                       CAST(:status AS VARCHAR) IS NULL
                       OR a.status = CAST(:status AS VARCHAR)
                   )
 
                   AND (
-                      CAST(:search AS VARCHAR) IS NULL
-                      OR a.appt_id ILIKE CAST(:search AS VARCHAR)
-                      OR a.customer_name ILIKE CAST(:search AS VARCHAR)
-                      OR c.carrier_name ILIKE CAST(:search AS VARCHAR)
-                  )
+    CAST(:search AS VARCHAR) IS NULL
+
+    OR a.appt_id
+        ILIKE CAST(:search AS VARCHAR)
+
+    OR COALESCE(a.customer_name, '')
+        ILIKE CAST(:search AS VARCHAR)
+
+    OR COALESCE(f.facility_name, '')
+        ILIKE CAST(:search AS VARCHAR)
+
+    OR COALESCE(c.carrier_name, '')
+        ILIKE CAST(:search AS VARCHAR)
+
+    OR COALESCE(a.status, '')
+        ILIKE CAST(:search AS VARCHAR)
+
+    OR TO_CHAR(
+        a.scheduled_time,
+        'Mon DD, HH12:MI AM'
+    ) ILIKE CAST(:search AS VARCHAR)
+
+    OR CAST(a.scheduled_time AS VARCHAR)
+        ILIKE CAST(:search AS VARCHAR)
+
+    OR TO_CHAR(
+        a.estimated_arrival_time,
+        'Mon DD, HH12:MI AM'
+    ) ILIKE CAST(:search AS VARCHAR)
+
+    OR CAST(
+        a.estimated_arrival_time
+        AS VARCHAR
+    ) ILIKE CAST(:search AS VARCHAR)
+
+    OR (
+        CASE
+            WHEN a.is_rescheduled = TRUE
+                 AND COALESCE(a.edit_count, 0) > 0
+                THEN 'Rescheduled Edited'
+
+            WHEN a.is_rescheduled = TRUE
+                THEN 'Rescheduled'
+
+            WHEN COALESCE(a.edit_count, 0) > 0
+                THEN 'Edited'
+
+            ELSE 'Original'
+        END
+    ) ILIKE CAST(:search AS VARCHAR)
+
+    OR CAST(
+        p.turn_risk_score
+        AS VARCHAR
+    ) ILIKE CAST(:search AS VARCHAR)
+)
 
                   AND (
                       CAST(:risk_level AS VARCHAR) IS NULL

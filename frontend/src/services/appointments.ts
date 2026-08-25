@@ -104,6 +104,20 @@ export async function getPaginatedAppointments(
     );
   }
 
+  if (query.timeFrom) {
+    params.set(
+      "time_from",
+      query.timeFrom,
+    );
+  }
+
+  if (query.timeTo) {
+    params.set(
+      "time_to",
+      query.timeTo,
+    );
+  }
+
   if (query.dateTo) {
     params.set(
       "date_to",
@@ -365,10 +379,9 @@ export async function createAppointment(
                     .join(".") ||
                   "request";
 
-                return `${location}: ${
-                  item.msg ??
+                return `${location}: ${item.msg ??
                   "Invalid value"
-                }`;
+                  }`;
               },
             )
             .join("; ");
